@@ -86,7 +86,7 @@ void epsilon_greedy::clear() {
 }
 
 void epsilon_greedy::pack(framework::packer& pk) const {
-  pk.pack(s_);
+  msgpack::pack(pk, s_);
 }
 void epsilon_greedy::unpack(msgpack::object o) {
   o.convert(&s_);

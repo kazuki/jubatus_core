@@ -33,14 +33,14 @@ class jubatus_packer {
  public:
   explicit jubatus_packer(jubatus_writer& w) : writer_(w) {
   }
-  void write(const char* buf, unsigned int len) {
-    writer_.write(buf, len);
+  void write(const char* buf, std::size_t len) {
+    writer_.write(buf, static_cast<unsigned int>(len));
   }
  private:
   jubatus_writer& writer_;
 };
 
-typedef msgpack::packer<jubatus_packer> packer;
+typedef msgpack::MSGPACK_DEFAULT_API_NS::packer<jubatus_packer> packer;
 
 }  // namespace framework
 }  // namespace core

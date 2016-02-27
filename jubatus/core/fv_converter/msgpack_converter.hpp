@@ -17,9 +17,7 @@
 #ifndef JUBATUS_CORE_FV_CONVERTER_MSGPACK_CONVERTER_HPP_
 #define JUBATUS_CORE_FV_CONVERTER_MSGPACK_CONVERTER_HPP_
 
-namespace msgpack {
-struct object;
-}  // namespace msgpack
+#include <msgpack.hpp>
 
 namespace jubatus {
 namespace core {

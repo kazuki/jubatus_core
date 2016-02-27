@@ -83,7 +83,7 @@ void ucb1::clear() {
 }
 
 void ucb1::pack(framework::packer& pk) const {
-  pk.pack(s_);
+  msgpack::pack(pk, s_);
 }
 void ucb1::unpack(msgpack::object o) {
   o.convert(&s_);

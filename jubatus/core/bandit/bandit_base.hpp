@@ -20,17 +20,10 @@
 #include <string>
 
 #include "arm_info.hpp"
+#include "../framework/packer.hpp"
 
-namespace msgpack {
-template <typename T>
-class packer;
-}  // namespace msgpack
 namespace jubatus {
 namespace core {
-namespace framework {
-class jubatus_packer;
-typedef msgpack::packer<jubatus_packer> packer;
-}  // namespace framework
 namespace storage {
 class version;
 }  // namespace storage
