@@ -8,12 +8,16 @@ def build(bld):
       'random.h',
       'random/license.h',
       'random/mersenne_twister.h',
+      'random/xorshift128plus.h',
       'vector.h',
       'fft.h',
       ], relative_trick = True)
 
   bld.shlib(
-    source = 'random/mersenne_twister.cpp',
+    source = [
+      'random/mersenne_twister.cpp',
+      'random/xorshift128plus.cpp'
+    ],
     target = 'jubatus_util_math',
     vnum = bld.env['ABI_VERSION'],
     includes = '.')

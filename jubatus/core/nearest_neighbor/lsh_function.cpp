@@ -43,9 +43,13 @@ vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num, pro
       vector<float> random_vector;
       random_vector.reserve(hash_num);
       const uint32_t seed = common::hash_util::calc_string_hash(sfv[i].first);
+#if 0
       jubatus::util::math::random::mtrand rnd(seed);
+#else
+      jubatus::util::math::random::xorshift128_rand rnd(seed);
+#endif
       for (uint32_t j = 0; j < hash_num; ++j) {
-        const float r = rnd.next_gaussian();
+        const float r = rnd.next_gaussian32();
         proj[j] += sfv[i].second * r;
         random_vector.push_back(r);
       }

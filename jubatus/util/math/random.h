@@ -39,6 +39,7 @@
 #include "../system/time_util.h"
 #include "constant.h"
 #include "random/mersenne_twister.h"
+#include "random/xorshift128plus.h"
 
 namespace jubatus {
 namespace util{
@@ -97,6 +98,12 @@ public:
     return a+next_double(b-a);
   }
 
+  /// generates [0,1) random real number with 24bit resolution
+  double next_float(){
+    uint32_t a=g.next()>>8;
+    return a * (1.0f/16777216.0f);
+  }
+
   /// generate normalized standard distribution
   double next_gaussian(){
     if(next_gaussian_stocked){
@@ -118,6 +125,24 @@ public:
     return mean + deviation * next_gaussian();
   }
 
+  float next_gaussian32(){
+    if(next_gaussian32_stocked){
+      next_gaussian32_stocked=false;
+      return next_gaussian32_stock;
+    }else{
+      float f, a, b, r;
+      do {
+        a = 2.0 * next_float() - 1.0;
+        b = 2.0 * next_float() - 1.0;
+        r = a * a + b * b;
+      } while (r >= 1.0 || r == 0.0);
+      f = std::sqrt(-2.0 * std::log(r) / r);
+      next_gaussian32_stock = f * a;
+      next_gaussian32_stocked = true;
+      return f * b;
+    }
+  }
+
   ////mul next_int()
   uint32_t operator()(){
     return next_int();
@@ -137,9 +162,11 @@ public:
 private:
   Gen g;
   bool next_gaussian_stocked; double next_gaussian_stock;
+  bool next_gaussian32_stocked; float next_gaussian32_stock;
 };
 
 typedef random<mersenne_twister> mtrand;
+typedef random<xorshift128plus> xorshift128_rand;
 
 /// select k random integer from range [0,n), allowing multiple occurrence. O(k)
 template<typename RAND>
