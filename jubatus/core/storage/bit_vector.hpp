@@ -21,6 +21,9 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#ifdef __AVX2__
+#include <immintrin.h>
+#endif
 
 #include <msgpack.hpp>
 #include "jubatus/util/lang/cast.h"
@@ -319,10 +322,35 @@ struct bit_vector_base {
       return bit_count();
     }
     size_t match_num = 0;
+#ifdef __AVX2__
+    static const __m256i zero = _mm256_setzero_si256();
+    static const __m256i mask = _mm256_set1_epi8(0xF);
+    static const __m256i pop = _mm256_setr_epi8(
+      0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
+      0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4);
+    const __m256i *x = (const __m256i*)bits_;
+    const __m256i *y = (const __m256i*)bv.bits_;
+    const size_t blocks = used_bytes() / sizeof(__m256i);
+    __m256i a, b, z, sum = _mm256_setzero_si256();
+    for (size_t i = 0; i < blocks; ++i) {
+      z = _mm256_xor_si256(_mm256_loadu_si256(x + i),
+                           _mm256_loadu_si256(y + i));
+      a = _mm256_and_si256(z, mask);
+      b = _mm256_srli_epi32(z, 4);
+      b = _mm256_and_si256(b, mask);
+      a = _mm256_shuffle_epi8(pop, a);
+      b = _mm256_shuffle_epi8(pop, b);
+      a = _mm256_add_epi8(a, b);
+      a = _mm256_sad_epu8(a, zero);
+      sum = _mm256_add_epi64(a, sum);
+    }
+    match_num += sum[0] + sum[1] + sum[2] + sum[3];
+#else
     for (size_t i = 0, blocks = used_bytes() / sizeof(bit_base);
          i < blocks; ++i) {
       match_num += detail::bitcount(bits_[i] ^ bv.bits_[i]);
     }
+#endif
     return match_num;
   }
   size_t bit_count() const {
