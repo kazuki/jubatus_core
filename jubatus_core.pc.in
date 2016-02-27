@@ -7,4 +7,4 @@ Name: @PACKAGE@
 Description: Framework and Library for Distributed Online Machine Learning
 Version: @VERSION@
 Cflags: -I${includedir}
-Libs: -L${libdir} -ljubatus_core -lmsgpack -ljubatus_util_concurrent -ljubatus_util_data -ljubatus_util_lang -ljubatus_util_math -ljubatus_util_system -ljubatus_util_text
+Libs: -L${libdir} -ljubatus_core -ljubatus_util_concurrent -ljubatus_util_data -ljubatus_util_lang -ljubatus_util_math -ljubatus_util_system -ljubatus_util_text

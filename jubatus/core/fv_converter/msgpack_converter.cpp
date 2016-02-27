@@ -56,16 +56,17 @@ void iter_convert(
       break;
     }
 
-    case msgpack::type::DOUBLE: {
-      double v = object.via.dec;
+    case msgpack::type::FLOAT: {
+      double v = object.via.f64;
       datum.num_values_.push_back(std::make_pair(path, v));
       break;
     }
 
-    case msgpack::type::RAW: {
-      const msgpack::object_raw& raw = object.via.raw;
+    case msgpack::type::BIN: // compatibility hack
+    case msgpack::type::STR: {
+      const msgpack::object_str& str = object.via.str;
       datum.string_values_.push_back(
-          std::make_pair(path, std::string(raw.ptr, raw.size)));
+          std::make_pair(path, std::string(str.ptr, str.size)));
       break;
     }
 

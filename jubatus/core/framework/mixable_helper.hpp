@@ -85,7 +85,7 @@ class linear_mixable_helper : public linear_mixable {
   void get_diff(packer& pk) const {
     Diff diff;
     model_->get_diff(diff);
-    pk.pack(diff);
+    msgpack::pack(pk, diff);
   }
 
   bool put_diff(const diff_object& ptr) {
@@ -105,7 +105,7 @@ class linear_mixable_helper : public linear_mixable {
  private:
   struct internal_diff_object : diff_object_raw {
     void convert_binary(packer& pk) const {
-      pk.pack(diff_);
+      msgpack::pack(pk, diff_);
     }
 
     Diff diff_;

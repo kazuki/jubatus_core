@@ -101,45 +101,61 @@ inline void swap(byte_buffer& one, byte_buffer& another) {  // NOLINT
 }  // namespace jubatus
 
 namespace msgpack {
+MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
+namespace adaptor {
 
-inline jubatus::core::common::byte_buffer& operator>>(
-    object o,
-    jubatus::core::common::byte_buffer& b) {
-  if (o.type != type::RAW) {
-    throw type_error();
+template <>
+struct convert<jubatus::core::common::byte_buffer> {
+  msgpack::object const& operator()(
+      msgpack::object const& o,
+      jubatus::core::common::byte_buffer& b) const {
+    if (o.type != type::BIN) {
+      throw type_error();
+    }
+
+    b.assign(o.via.bin.ptr, o.via.bin.size);
+    return o;
   }
+};
 
-  b.assign(o.via.raw.ptr, o.via.raw.size);
-  return b;
-}
+template <>
+struct pack<jubatus::core::common::byte_buffer> {
+  template <typename Stream>
+  msgpack::packer<Stream>& operator()(
+      msgpack::packer<Stream>& o,
+      jubatus::core::common::byte_buffer const& b) const {
+    o.pack_bin(b.size());
+    o.pack_bin_body(b.ptr(), b.size());
+    return o;
+  }
+};
 
-template<typename Stream>
-inline packer<Stream>& operator<<(
-    packer<Stream>& o,
-    const jubatus::core::common::byte_buffer& b) {
-  o.pack_raw(b.size());
-  o.pack_raw_body(b.ptr(), b.size());
-  return o;
-}
+template <>
+struct object<jubatus::core::common::byte_buffer> {
+  void operator()(
+      msgpack::object& o,
+      jubatus::core::common::byte_buffer const& b) const {
+    o.type = type::BIN;
+    o.via.bin.ptr = b.ptr();
+    o.via.bin.size = static_cast<uint32_t>(b.size());
+  }
+};
 
-inline void operator<<(
-    object::with_zone& o,
-    const jubatus::core::common::byte_buffer& b) {
-  o.type = type::RAW;
-  char* ptr = static_cast<char*>(o.zone->malloc(b.size()));
-  o.via.raw.ptr = ptr;
-  o.via.raw.size = static_cast<uint32_t>(b.size());
-  std::memcpy(ptr, b.ptr(), b.size());
-}
+template <>
+struct object_with_zone<jubatus::core::common::byte_buffer> {
+  void operator()(
+      msgpack::object::with_zone& o,
+      jubatus::core::common::byte_buffer const& b) const {
+    o.type = type::BIN;
+    char* ptr = static_cast<char*>(o.zone.allocate_no_align(b.size()));
+    o.via.bin.ptr = ptr;
+    o.via.bin.size = static_cast<uint32_t>(b.size());
+    std::memcpy(ptr, b.ptr(), b.size());
+  }
+};
 
-inline void operator<<(
-    object& o,
-    const jubatus::core::common::byte_buffer& b) {
-  o.type = type::RAW;
-  o.via.raw.ptr = b.ptr();
-  o.via.raw.size = static_cast<uint32_t>(b.size());
-}
-
+}  // namespace adaptor
+}  // MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
 }  // namespace msgpack
 
 #endif  // JUBATUS_CORE_COMMON_BYTE_BUFFER_HPP_

@@ -104,7 +104,7 @@ void exp3::clear() {
 }
 
 void exp3::pack(framework::packer& pk) const {
-  pk.pack(s_);
+  msgpack::pack(pk, s_);
 }
 void exp3::unpack(msgpack::object o) {
   o.convert(&s_);
