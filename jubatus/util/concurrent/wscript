@@ -16,7 +16,7 @@ def build(bld):
       'qsem.h',
       ])
 
-  bld.shlib(
+  bld.stlib(
     source = 'thread.cpp mutex.cpp rwmutex.cpp condition.cpp internal.cpp',
     target = 'jubatus_util_concurrent',
     includes = '.',

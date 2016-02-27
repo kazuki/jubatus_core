@@ -103,7 +103,7 @@ def build(bld):
   bld.recurse(subdirs)
 
   # core
-  bld.shlib(source=list(set(bld.core_sources)), target='jubatus_core', use=list(set(bld.core_use)), vnum = ABI_VERSION)
+  bld.stlib(source=list(set(bld.core_sources)), target='jubatus_core', use=list(set(bld.core_use)), vnum = ABI_VERSION)
   bld.install_files('${PREFIX}/include/', list(set(bld.core_headers)), relative_trick=True)
 
 

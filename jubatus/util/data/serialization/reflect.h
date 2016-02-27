@@ -298,10 +298,11 @@ inline void serialize(reflection &ref, class_name &cn)
 } // jubatus
 
 #define JUBA_NAME(x) jubatus::util::data::serialization::class_name(#x).get()
-#ifdef __GXX_EXPERIMENTAL_CXX0X__ // C++11
+#if defined(__GXX_EXPERIMENTAL_CXX0X__) || defined(EMSCRIPTEN) // C++11
 #define JUBA_MEMBER(x) jubatus::util::data::serialization::named_value<decltype(x)>(#x, x).get()
 #define JUBA_NAMED_MEMBER(n, x) jubatus::util::data::serialization::named_value<decltype(x)>(n, x).get()
 #else
+#error
 #define JUBA_MEMBER(x) jubatus::util::data::serialization::named_value<typeof(x)>(#x, x).get()
 #define JUBA_NAMED_MEMBER(n, x) jubatus::util::data::serialization::named_value<typeof(x)>(n, x).get()
 #endif

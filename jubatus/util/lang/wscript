@@ -25,7 +25,7 @@ def build(bld):
       'enable_if.h'
       ])
 
-  bld.shlib(
+  bld.stlib(
     source = 'empty.cpp',
     vnum = bld.env['ABI_VERSION'],
     target = 'jubatus_util_lang')

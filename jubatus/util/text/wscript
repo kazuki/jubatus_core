@@ -13,7 +13,7 @@ def build(bld):
       'json/serialization.h',
       ], relative_trick = True)
   
-  bld.shlib(
+  bld.stlib(
     source = 'xhtml.cpp csv.cpp json/parser.cpp',
     target = 'jubatus_util_text',
     includes = '. json',

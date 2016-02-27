@@ -52,6 +52,8 @@ string get_error_msg(int err)
 #elif defined(__sparcv8) || defined(__sparcv9) || defined(__APPLE__)
   strerror_r(err,buf,BUF_SIZE);
   return string(buf);
+#elif defined(EMSCRIPTEN)
+  return string();
 #else
 #error cpp_strerror_r
 #endif

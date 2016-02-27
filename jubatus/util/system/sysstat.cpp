@@ -105,6 +105,8 @@ static double get_loadavg()
   kern_return_t error = host_statistics(mach_host_self(), HOST_LOAD_INFO, (host_info_t)&hl,&count);
   double res = static_cast<double>(hl.avenrun[2]) / static_cast<double>(LOAD_SCALE);
   return res;
+#elif defined(EMSCRIPTEN)
+  return 0.0;
 #else
 #error I dont know how to get loadavg
 #endif
@@ -142,6 +144,8 @@ static uint64_t get_total_memory()
   mach_msg_type_number_t count = HOST_BASIC_INFO_COUNT;
   host_info(mach_host_self(), HOST_BASIC_INFO, (host_info_t)&host, &count);
   return host.memory_size;
+#elif defined(EMSCRIPTEN)
+  return 1024 * 1024 * 16;
 #else
 #error I dont know how to get total memory size
 #endif
@@ -194,6 +198,8 @@ static uint64_t get_free_memory()
   mach_msg_type_number_t count = HOST_VM_INFO_COUNT;
   host_statistics(mach_host_self(), HOST_VM_INFO, (host_info_t)&vm_info, &count);
   return vm_info.free_count*vm_page_size;
+#elif defined(EMSCRIPTEN)
+  return get_total_memory();
 #else
 #error I dont know how to get free memory size
 #endif

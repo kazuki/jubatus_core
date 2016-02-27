@@ -12,7 +12,7 @@ def build(bld):
       'fft.h',
       ], relative_trick = True)
 
-  bld.shlib(
+  bld.stlib(
     source = 'random/mersenne_twister.cpp',
     target = 'jubatus_util_math',
     vnum = bld.env['ABI_VERSION'],

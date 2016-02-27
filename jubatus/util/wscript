@@ -27,7 +27,7 @@ def configure(conf):
     env.revert()
 
 def build(bld):
-  b = bld.shlib(
+  b = bld.stlib(
     source = 'empty.cpp',
     target = 'jubatus_util',
     vnum = bld.env['ABI_VERSION'],

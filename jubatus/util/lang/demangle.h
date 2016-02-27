@@ -34,7 +34,7 @@
 #include <string>
 #include <typeinfo>
 
-#if __GNUC__ >= 3
+#if __GNUC__ >= 3 && !defined(EMSCRIPTEN)
 #include <cstdlib>
 #include <cxxabi.h>
 

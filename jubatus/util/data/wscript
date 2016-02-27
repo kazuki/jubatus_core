@@ -52,7 +52,7 @@ def build(bld):
       'intern.h'
       ], relative_trick = True)
 
-  bld.shlib(
+  bld.stlib(
     source = [
       'encoding/base64.cpp',
       'digest/md5.cpp',

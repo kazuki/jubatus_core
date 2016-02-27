@@ -46,6 +46,8 @@ inline std::string to_string(const error_errno& info) {
 #elif defined(__sparcv8) || defined(__sparcv9) || defined(__APPLE__)
   strerror_r(info.value(), buf, sizeof(buf));
   std::string msg(buf);
+#elif defined(EMSCRIPTEN)
+  std::string msg;
 #else
 #error cpp_strerror_r
 #endif
