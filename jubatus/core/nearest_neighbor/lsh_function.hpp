@@ -21,16 +21,29 @@
 #include <vector>
 #include "../common/type.hpp"
 #include "../storage/bit_vector.hpp"
+#include "../../util/data/unordered_map.h"
+#include "../../util/concurrent/rwmutex.h"
+
+using jubatus::util::concurrent::rw_mutex;
 
 namespace jubatus {
 namespace core {
 namespace nearest_neighbor {
 
+typedef util::data::unordered_map<std::string, std::vector<float> > projection_cache_t;
+
 std::vector<float> random_projection(
     const common::sfv_t& sfv,
-    uint32_t hash_num);
+    uint32_t hash_num,
+    projection_cache_t& cache,
+    rw_mutex& mutex
+);
 storage::bit_vector binarize(const std::vector<float>& proj);
-storage::bit_vector cosine_lsh(const common::sfv_t& sfv, uint32_t hash_num);
+storage::bit_vector cosine_lsh(
+    const common::sfv_t& sfv,
+    uint32_t hash_num,
+    projection_cache_t& cache,
+    rw_mutex& mutex);
 
 }  // namespace nearest_neighbor
 }  // namespace core

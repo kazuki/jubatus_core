@@ -24,6 +24,7 @@
 #include "jubatus/util/data/serialization.h"
 #include "jubatus/util/lang/shared_ptr.h"
 #include "nearest_neighbor_base.hpp"
+#include "lsh_function.hpp"
 
 namespace jubatus {
 namespace core {
@@ -90,6 +91,8 @@ class euclid_lsh : public nearest_neighbor_base {
 
   uint64_t first_column_id_;
   uint32_t hash_num_;
+  mutable projection_cache_t cache_;
+  mutable rw_mutex cache_mutex_;
 };
 
 }  // namespace nearest_neighbor_base

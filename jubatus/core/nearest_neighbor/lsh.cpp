@@ -51,7 +51,7 @@ lsh::lsh(
 }
 
 storage::bit_vector lsh::hash(const common::sfv_t& sfv) const {
-  return cosine_lsh(sfv, bitnum());
+  return cosine_lsh(sfv, bitnum(), cache_, cache_mutex_);
 }
 
 }  // namespace nearest_neighbor

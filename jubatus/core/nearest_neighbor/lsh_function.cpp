@@ -28,15 +28,38 @@ namespace jubatus {
 namespace core {
 namespace nearest_neighbor {
 
-vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num) {
+vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num, projection_cache_t& cache, rw_mutex& mutex) {
   vector<float> proj(hash_num);
+  bool hold_wlock = false;
+  mutex.read_lock();
   for (size_t i = 0; i < sfv.size(); ++i) {
-    const uint32_t seed = common::hash_util::calc_string_hash(sfv[i].first);
-    jubatus::util::math::random::mtrand rnd(seed);
-    for (uint32_t j = 0; j < hash_num; ++j) {
-      proj[j] += sfv[i].second * rnd.next_gaussian();
+    projection_cache_t::const_iterator it = cache.find(sfv[i].first);
+    if (it != cache.end()) {
+      const vector<float>& random_vector = it->second;
+      for (uint32_t j = 0; j < hash_num; ++j) {
+        proj[j] += sfv[i].second * random_vector[j];
+      }
+    } else {
+      vector<float> random_vector;
+      random_vector.reserve(hash_num);
+      const uint32_t seed = common::hash_util::calc_string_hash(sfv[i].first);
+      jubatus::util::math::random::mtrand rnd(seed);
+      for (uint32_t j = 0; j < hash_num; ++j) {
+        const float r = rnd.next_gaussian();
+        proj[j] += sfv[i].second * r;
+        random_vector.push_back(r);
+      }
+      if (!hold_wlock) {
+          mutex.unlock();
+          mutex.write_lock();
+          hold_wlock = true;
+          if (cache.find(sfv[i].first) != cache.end())
+              continue;
+      }
+      cache.insert(std::make_pair(sfv[i].first, random_vector));
     }
   }
+  mutex.unlock();
   return proj;
 }
 
@@ -50,8 +73,8 @@ bit_vector binarize(const vector<float>& proj) {
   return bv;
 }
 
-bit_vector cosine_lsh(const common::sfv_t& sfv, uint32_t hash_num) {
-  return binarize(random_projection(sfv, hash_num));
+bit_vector cosine_lsh(const common::sfv_t& sfv, uint32_t hash_num, projection_cache_t& cache, rw_mutex& mutex) {
+  return binarize(random_projection(sfv, hash_num, cache, mutex));
 }
 
 }  // namespace nearest_neighbor
