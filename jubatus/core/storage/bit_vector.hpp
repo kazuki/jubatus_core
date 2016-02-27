@@ -310,15 +310,16 @@ struct bit_vector_base {
    * Uninitialized vectors are considered as zero-initialized.
    */
   uint64_t calc_hamming_distance(const bit_vector_base& bv) const {
-    if (bit_num() != bv.bit_num()) {
+    return calc_hamming_distance_raw(bv.bits_, bv.bit_num());
+  }
+  inline uint64_t calc_hamming_distance_raw(const bit_base *bv_bits, size_t bv_bit_num) const {
+    if (bit_num() != bv_bit_num) {
       throw bit_vector_unmatch_exception(
           "calc_hamming_similarity(): bit_vector length unmatch! " +
           jubatus::util::lang::lexical_cast<std::string>(bit_num()) + " with " +
-          jubatus::util::lang::lexical_cast<std::string>(bv.bit_num()));
+          jubatus::util::lang::lexical_cast<std::string>(bv_bit_num));
     }
-    if (bits_ == NULL) {
-      return bv.bit_count();
-    } else if (bv.bits_ == NULL) {
+    if (bits_ == NULL || bv_bits == NULL) {
       return bit_count();
     }
     size_t match_num = 0;
@@ -329,7 +330,7 @@ struct bit_vector_base {
       0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
       0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4);
     const __m256i *x = (const __m256i*)bits_;
-    const __m256i *y = (const __m256i*)bv.bits_;
+    const __m256i *y = (const __m256i*)bv_bits;
     const size_t blocks = used_bytes() / sizeof(__m256i);
     __m256i a, b, z, sum = _mm256_setzero_si256();
     for (size_t i = 0; i < blocks; ++i) {
@@ -348,7 +349,7 @@ struct bit_vector_base {
 #else
     for (size_t i = 0, blocks = used_bytes() / sizeof(bit_base);
          i < blocks; ++i) {
-      match_num += detail::bitcount(bits_[i] ^ bv.bits_[i]);
+      match_num += detail::bitcount(bits_[i] ^ bv_bits[i]);
     }
 #endif
     return match_num;

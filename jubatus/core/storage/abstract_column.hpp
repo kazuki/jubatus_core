@@ -294,6 +294,9 @@ class typed_column<bit_vector> : public detail::abstract_column_base {
       const uint64_t index, framework::packer& pk) const {
     pk.pack((*this)[index]);
   }
+  const uint64_t* get_pointer_at(size_t index) const {
+    return get_data_at_(index);
+  }
 
   friend std::ostream& operator<<(std::ostream& os,
                                   const typed_column<bit_vector>& c) {
