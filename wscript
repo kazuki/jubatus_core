@@ -34,6 +34,10 @@ def options(opt):
                  action='store', default="",
                  dest='fsanitize', help='specify sanitizer')
 
+  opt.add_option('--enable-opencl',
+                 action='store_true', default=False,
+                 dest='opencl', help='enabled opencl')
+
   opt.recurse(subdirs)
 
 def configure(conf):
@@ -72,6 +76,10 @@ def configure(conf):
     conf.env.append_value('CXXFLAGS', '-fprofile-arcs')
     conf.env.append_value('CXXFLAGS', '-ftest-coverage')
     conf.env.append_value('LINKFLAGS', '-lgcov')
+
+  if Options.options.opencl:
+    conf.env.append_value('CXXFLAGS', '-DUSE_OPENCL')
+    conf.env.append_value('LINKFLAGS', '-lOpenCL')
 
   sanitizer_names = Options.options.fsanitize
   if len(sanitizer_names) > 0:

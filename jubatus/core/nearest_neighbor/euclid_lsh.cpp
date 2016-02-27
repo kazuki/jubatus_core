@@ -26,6 +26,10 @@
 #include "../storage/column_table.hpp"
 #include "lsh_function.hpp"
 
+#ifdef USE_OPENCL
+#include "jubatus/util/opencl.hpp"
+#endif
+
 using std::map;
 using std::pair;
 using std::make_pair;
@@ -62,12 +66,21 @@ euclid_lsh::euclid_lsh(
     const config& conf,
     jubatus::util::lang::shared_ptr<column_table> table,
     const std::string& id)
-    : nearest_neighbor_base(table, id) {
+    : nearest_neighbor_base(table, id),
+      first_column_id_(), hash_num_(),
+      cache_(), cache_mutex_()
+#ifdef USE_OPENCL
+    , cl_prog_(jubatus::util::cl::GPU), cl_kernel_(NULL), cl_scores_(NULL), cl_scores_capacity_(0)
+#endif
+{
   set_config(conf);
 
   vector<column_type> schema;
   fill_schema(schema);
   get_table()->init(schema);
+#ifdef USE_OPENCL
+  init_cl();
+#endif
 }
 
 euclid_lsh::euclid_lsh(
@@ -75,10 +88,31 @@ euclid_lsh::euclid_lsh(
     jubatus::util::lang::shared_ptr<column_table> table,
     vector<column_type>& schema,
     const std::string& id)
-    : nearest_neighbor_base(table, id) {
+    : nearest_neighbor_base(table, id),
+      first_column_id_(), hash_num_(),
+      cache_(), cache_mutex_()
+#ifdef USE_OPENCL
+    , cl_prog_(jubatus::util::cl::GPU), cl_kernel_(NULL), cl_scores_(NULL), cl_scores_capacity_(0)
+#endif
+{
   set_config(conf);
   fill_schema(schema);
+#ifdef USE_OPENCL
+  init_cl();
+#endif
 }
+
+#ifdef USE_OPENCL
+euclid_lsh:: ~euclid_lsh()
+{
+  if (cl_bv_)
+    clSVMFree(jubatus::util::cl::GPU.context(), cl_bv_);
+  if (cl_scores_)
+    clSVMFree(jubatus::util::cl::GPU.context(), cl_scores_);
+  if (cl_kernel_)
+    clReleaseKernel(cl_kernel_);
+}
+#endif
 
 void euclid_lsh::set_row(const string& id, const common::sfv_t& sfv) {
   // TODO(beam2d): support nested algorithm, e.g. when used by lof and then we
@@ -145,9 +179,23 @@ void euclid_lsh::neighbor_row_from_hash(
 
   jubatus::core::storage::fixed_size_heap<pair<float, size_t> > heap(ret_num);
   {
+#ifdef USE_OPENCL
+    if (cl_scores_capacity_ < table->size()) {
+      if (cl_scores_)
+        clSVMFree(jubatus::util::cl::GPU.context(), cl_scores_);
+      cl_scores_ = (float*)clSVMAlloc(jubatus::util::cl::GPU.context(),
+                                       CL_MEM_READ_WRITE | CL_MEM_SVM_FINE_GRAIN_BUFFER,
+                                       table->size() * sizeof(float), 0);
+      cl_scores_capacity_ = table->size();
+    }
+    std::memcpy(cl_bv_, bv.raw_data_unsafe(), hash_num_ / 8);
+    cl_func_(cl_bv_, norm, cl_scores_);
+    for (size_t i = 0; i < table->size(); ++i) {
+      heap.push(make_pair(cl_scores_[i], i));
+    }
+#else
     const_bit_vector_column& bv_col = lsh_column();
     const_float_column& norm_col = norm_column();
-
     const float denom = bv.bit_num();
     for (size_t i = 0; i < table->size(); ++i) {
       const size_t hamm_dist = bv.calc_hamming_distance_raw(bv_col.get_pointer_at(i),
@@ -157,6 +205,7 @@ void euclid_lsh::neighbor_row_from_hash(
           norm_col[i] * (norm_col[i] - 2 * norm * std::cos(theta));
       heap.push(make_pair(score, i));
     }
+#endif
   }
 
   vector<pair<float, size_t> > sorted;
@@ -169,6 +218,61 @@ void euclid_lsh::neighbor_row_from_hash(
                             std::sqrt(squared_norm + sorted[i].first)));
   }
 }
+
+#ifdef USE_OPENCL
+const char *OPENCL_CODE =
+"// #define BVSIZE = bitvectorのサイズ(ビット数 / 64)\n"
+"// #define DENOM = bitvectorのビット数\n"
+"// #define PI = M_PI\n"
+"__kernel void calc_euclid_lsh_score(__global const ulong *target, __global const ulong *bitvectors, __global const float *norms, float NORM, __global float* restrict scores) {\n"
+"  size_t i = get_global_id(0);\n"
+"  __global const ulong *bv = bitvectors + (i * BVSIZE);\n"
+"  uint hamm_dist = 0;\n"
+"  for (int j = 0; j < BVSIZE; ++j) {\n"
+"    hamm_dist += popcount(target[j] ^ bv[j]);\n"
+"  }\n"
+"  const float theta = hamm_dist * PI / DENOM;\n"
+"  const float norm = norms[i];\n"
+"  scores[i] = norm * (norm - 2 * NORM * native_cos(theta));\n"
+"}";
+
+void euclid_lsh::init_cl() {
+  std::string opt("-cl-std=CL2.0 -DPI=3.14159265358979323846 -DBVSIZE=");
+  opt += std::to_string(hash_num_ / 64);
+  opt += " -DDENOM=";
+  opt += std::to_string(hash_num_);
+  cl_prog_.build(OPENCL_CODE, opt);
+  cl_kernel_ = cl_prog_.get("calc_euclid_lsh_score");
+  cl_bv_ = (uint64_t*)clSVMAlloc(jubatus::util::cl::GPU.context(),
+                                 CL_MEM_READ_ONLY | CL_MEM_SVM_FINE_GRAIN_BUFFER,
+                                 hash_num_ / 8, 0);
+  cl_func_ = [this](const uint64_t *bv, float norm, float *scores) {
+    const_bit_vector_column& bv_col = this->lsh_column();
+    const_float_column& norm_col = this->norm_column();
+    const uint64_t *bv_ptr = bv_col.data();
+    const float *norm_ptr = norm_col.data();
+    size_t global_size = this->get_const_table()->size();
+    if (clSetKernelArgSVMPointer(this->cl_kernel_, 0, bv) != CL_SUCCESS)
+      throw std::runtime_error("failed clSetKernelArgSVMPointer");
+    if (clSetKernelArgSVMPointer(this->cl_kernel_, 1, bv_ptr) != CL_SUCCESS)
+      throw std::runtime_error("failed clSetKernelArgSVMPointer");
+    if (clSetKernelArgSVMPointer(this->cl_kernel_, 2, norm_ptr) != CL_SUCCESS)
+      throw std::runtime_error("failed clSetKernelArgSVMPointer");
+    if (clSetKernelArg(this->cl_kernel_, 3, sizeof(float), &norm) != CL_SUCCESS)
+      throw std::runtime_error("failed clSetKernelArg");
+    if (clSetKernelArgSVMPointer(this->cl_kernel_, 4, scores) != CL_SUCCESS)
+      throw std::runtime_error("failed clSetKernelArgSVMPointer");
+    cl_event evt;
+    if (clEnqueueNDRangeKernel(this->cl_prog_.queue(), this->cl_kernel_,
+                               1, NULL, &global_size,
+                               NULL, 0, NULL, &evt) != CL_SUCCESS)
+      throw std::runtime_error("failed clEnqueueNDRangeKernel");
+    if (clFlush(this->cl_prog_.queue()) != CL_SUCCESS)
+      throw std::runtime_error("failed clFlush");
+    clWaitForEvents(1, &evt);
+  };
+}
+#endif
 
 }  // namespace nearest_neighbor
 }  // namespace core

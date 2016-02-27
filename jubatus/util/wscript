@@ -28,7 +28,7 @@ def configure(conf):
 
 def build(bld):
   b = bld.shlib(
-    source = 'empty.cpp',
+    source = ['empty.cpp', 'opencl.cpp'],
     target = 'jubatus_util',
     vnum = bld.env['ABI_VERSION'],
     use = [

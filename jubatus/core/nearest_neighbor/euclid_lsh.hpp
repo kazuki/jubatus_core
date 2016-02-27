@@ -58,6 +58,9 @@ class euclid_lsh : public nearest_neighbor_base {
       jubatus::util::lang::shared_ptr<storage::column_table> table,
       std::vector<storage::column_type>& schema,
       const std::string& id);
+#ifdef USE_OPENCL
+  virtual ~euclid_lsh();
+#endif
 
   virtual std::string type() const {
     return "euclid_lsh";
@@ -93,6 +96,15 @@ class euclid_lsh : public nearest_neighbor_base {
   uint32_t hash_num_;
   mutable projection_cache_t cache_;
   mutable rw_mutex cache_mutex_;
+#ifdef USE_OPENCL
+  jubatus::util::cl::Program cl_prog_;
+  cl_kernel cl_kernel_;
+  std::function<void(const uint64_t*,float, float*)> cl_func_;
+  uint64_t *cl_bv_;
+  mutable float *cl_scores_;
+  mutable size_t cl_scores_capacity_;
+  void init_cl();
+#endif
 };
 
 }  // namespace nearest_neighbor_base

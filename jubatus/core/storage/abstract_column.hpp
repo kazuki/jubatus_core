@@ -33,6 +33,11 @@
 #include "bit_vector.hpp"
 #include "column_type.hpp"
 
+#ifdef USE_OPENCL
+#include <iostream>
+#include "jubatus/util/opencl.hpp"
+#endif
+
 namespace jubatus {
 namespace core {
 namespace storage {
@@ -103,7 +108,11 @@ template <typename T>
 class typed_column : public detail::abstract_column_base {
  public:
   explicit typed_column(const column_type& type)
-      : detail::abstract_column_base(type) {
+      : detail::abstract_column_base(type)
+#ifdef USE_OPENCL
+      , array_(NULL), array_size_(0), array_capacity_(0)
+#endif
+  {
   }
 
   using detail::abstract_column_base::push_back;
@@ -111,7 +120,11 @@ class typed_column : public detail::abstract_column_base {
   using detail::abstract_column_base::update;
 
   void push_back(const T& value) {
+#ifdef USE_OPENCL
+    throw std::runtime_error("not implemented (push_back)");
+#else
     array_.push_back(value);
+#endif
   }
   void push_back(const msgpack::object& obj) {
     typed_column::push_back(obj.as<T>());
@@ -121,7 +134,11 @@ class typed_column : public detail::abstract_column_base {
     if (size() < target) {
       return false;
     }
+#ifdef USE_OPENCL
+    throw std::runtime_error("not implemented (insert)");
+#else
     array_.insert(array_.begin() + target, value);
+#endif
     return true;
   }
   bool insert(uint64_t target, const msgpack::object& obj) {
@@ -144,16 +161,29 @@ class typed_column : public detail::abstract_column_base {
       return false;
     }
     using std::swap;
+#ifdef USE_OPENCL
+    swap(array_[target], array_[array_size_ - 1]);
+    --array_size_;
+#else
     swap(array_[target], array_.back());
     array_.pop_back();
+#endif
     return true;
   }
   void clear() {
+#ifdef USE_OPENCL
+    array_size_ = 0;
+#else
     array_.clear();
+#endif
   }
 
   uint64_t size() const {
+#ifdef USE_OPENCL
+    return array_size_;
+#else
     return array_.size();
+#endif
   }
 
   const T& operator[](uint64_t index) const {
@@ -162,7 +192,7 @@ class typed_column : public detail::abstract_column_base {
         "invalid index [" +
         jubatus::util::lang::lexical_cast<std::string>(index) +
         "] for [" +
-        jubatus::util::lang::lexical_cast<std::string>(array_.size()));
+        jubatus::util::lang::lexical_cast<std::string>(size()));
     }
     return array_[index];
   }
@@ -173,9 +203,17 @@ class typed_column : public detail::abstract_column_base {
         "invalid index [" +
         jubatus::util::lang::lexical_cast<std::string>(index) +
         "] for [" +
-        jubatus::util::lang::lexical_cast<std::string>(array_.size()));
+        jubatus::util::lang::lexical_cast<std::string>(size()));
     }
     return array_[index];
+  }
+
+  const T* data() const {
+#ifdef USE_OPENCL
+    return array_;
+#else
+    return array_.data();
+#endif
   }
 
   void pack_with_index(
@@ -200,21 +238,56 @@ class typed_column : public detail::abstract_column_base {
 
   template<class Buffer>
   void pack_array(msgpack::packer<Buffer>& packer) const {
+#ifdef USE_OPENCL
+    throw std::runtime_error("not implemented (pack_array)");
+#else
     packer.pack(array_);
+#endif
   }
   void unpack_array(msgpack::object o) {
+#ifdef USE_OPENCL
+    msgpack::object_array& a = o.via.array;
+    if (array_capacity_ < a.size) {
+      if (array_)
+        clSVMFree(jubatus::util::cl::GPU.context(), array_);
+      array_capacity_ = array_size_ = a.size;
+      array_ = (T*)clSVMAlloc(jubatus::util::cl::GPU.context(),
+                              CL_MEM_READ_ONLY | CL_MEM_SVM_FINE_GRAIN_BUFFER,
+                              array_capacity_ * sizeof(T), 0);
+    }
+    if (array_size_ == 0)
+      return;
+    if (a.ptr[0].type == msgpack::type::FLOAT) {
+      for (size_t i = 0; i < a.size; ++i) {
+        array_[i] = a.ptr[i].via.f64;
+      }
+    } else {
+      throw std::runtime_error("not implemented");
+    }
+#else
     o.convert(&array_);
+#endif
   }
 
  private:
+#ifdef USE_OPENCL
+  T* array_;
+  size_t array_size_;
+  size_t array_capacity_;
+#else
   std::vector<T> array_;
+#endif
 };
 
 template <>
 class typed_column<bit_vector> : public detail::abstract_column_base {
  public:
   explicit typed_column(const column_type& type)
-      : detail::abstract_column_base(type) {
+      : detail::abstract_column_base(type)
+#ifdef USE_OPENCL
+      , array_size_(0), array_capacity_(0), array_(NULL)
+#endif
+  {
   }
 
   using detail::abstract_column_base::push_back;
@@ -223,7 +296,19 @@ class typed_column<bit_vector> : public detail::abstract_column_base {
 
   void push_back(const bit_vector& value) {
     check_bit_vector_(value);
+#ifdef USE_OPENCL
+    if (array_size_ == array_capacity_) {
+      array_capacity_ *= 2;
+      uint64_t *new_ptr = (uint64_t*)clSVMAlloc(jubatus::util::cl::GPU.context(),
+                                                CL_MEM_READ_ONLY | CL_MEM_SVM_FINE_GRAIN_BUFFER,
+                                                array_capacity_ * sizeof(uint64_t), 0);
+      if (array_)
+        clSVMFree(jubatus::util::cl::GPU.context(), array_);
+      array_ = new_ptr;
+    }
+#else
     array_.resize(array_.size() + blocks_per_value_());
+#endif
     update_at_(size() - 1, value.raw_data_unsafe());
   }
   void push_back(const msgpack::object& obj) {
@@ -238,9 +323,13 @@ class typed_column<bit_vector> : public detail::abstract_column_base {
     if (size() < target) {
       return false;
     }
+#ifdef USE_OPENCL
+    throw std::runtime_error("not implemented (insert)");
+#else
     array_.insert(
         array_.begin() + target * blocks_per_value_(),
         blocks_per_value_(), 0);
+#endif
     update_at_(target, value.raw_data_unsafe());
     return true;
   }
@@ -266,8 +355,12 @@ class typed_column<bit_vector> : public detail::abstract_column_base {
   }
 
   uint64_t size() const {
+#ifdef USE_OPENCL
+    return array_size_ / blocks_per_value_();
+#else
     JUBATUS_ASSERT_EQ(array_.size() % blocks_per_value_(), 0u, "");
     return array_.size() / blocks_per_value_();
+#endif
   }
   bit_vector operator[](uint64_t index) {
     return bit_vector(get_data_at_(index), type().bit_vector_length());
@@ -283,16 +376,31 @@ class typed_column<bit_vector> : public detail::abstract_column_base {
       const void* back = get_data_at_(size() - 1);
       memcpy(get_data_at_(target), back, bytes_per_value_());
     }
+#ifdef USE_OPENCL
+    throw std::runtime_error("not implemented (remove)");
+#else
     JUBATUS_ASSERT_GE(array_.size(), blocks_per_value_(), "");
     array_.resize(array_.size() - blocks_per_value_());
+#endif
     return true;
   }
   void clear() {
+#ifdef USE_OPENCL
+    array_size_ = 0;
+#else
     array_.clear();
+#endif
   }
   void pack_with_index(
       const uint64_t index, framework::packer& pk) const {
     pk.pack((*this)[index]);
+  }
+  const uint64_t* data() const {
+#ifdef USE_OPENCL
+    return array_;
+#else
+    return array_.data();
+#endif
   }
   const uint64_t* get_pointer_at(size_t index) const {
     return get_data_at_(index);
@@ -315,14 +423,39 @@ class typed_column<bit_vector> : public detail::abstract_column_base {
 
   template<class Buffer>
   void pack_array(msgpack::packer<Buffer>& packer) const {
+#ifdef USE_OPENCL
+    throw std::runtime_error("not implemented (pack_array)");
+#else
     packer.pack(array_);
+#endif
   }
   void unpack_array(msgpack::object o) {
+#ifdef USE_OPENCL
+    msgpack::object_array& a = o.via.array;
+    if (array_capacity_ < a.size) {
+      if (array_)
+        clSVMFree(jubatus::util::cl::GPU.context(), array_);
+      array_capacity_ = array_size_ = a.size;
+      array_ = (uint64_t*)clSVMAlloc(jubatus::util::cl::GPU.context(),
+                                     CL_MEM_READ_ONLY | CL_MEM_SVM_FINE_GRAIN_BUFFER,
+                                     array_capacity_ * sizeof(uint64_t), 0);
+      for (size_t i = 0; i < a.size; ++i) {
+        array_[i] = a.ptr[i].via.u64;
+      }
+    }
+#else
     o.convert(&array_);
+#endif
   }
 
  private:
+#ifdef USE_OPENCL
+  size_t array_capacity_;
+  size_t array_size_;
+  uint64_t *array_;
+#else
   std::vector<uint64_t> array_;
+#endif
 
   size_t bytes_per_value_() const {
     return bit_vector::memory_size(type().bit_vector_length());
@@ -333,11 +466,19 @@ class typed_column<bit_vector> : public detail::abstract_column_base {
 
   uint64_t* get_data_at_(size_t index) {
     JUBATUS_ASSERT_LT(index, size(), "");
+#ifdef USE_OPENCL
+    return array_ + blocks_per_value_() * index;
+#else
     return &array_[blocks_per_value_() * index];
+#endif
   }
   const uint64_t* get_data_at_(size_t index) const {
     JUBATUS_ASSERT_LT(index, size(), "");
+#ifdef USE_OPENCL
+    return array_ + blocks_per_value_() * index;
+#else
     return &array_[blocks_per_value_() * index];
+#endif
   }
 
   void update_at_(size_t index, const void* raw_data) {
