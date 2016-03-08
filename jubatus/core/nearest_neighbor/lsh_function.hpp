@@ -22,13 +22,25 @@
 #include "../common/type.hpp"
 #include "../storage/bit_vector.hpp"
 
+#if defined(__GNUC__) && defined(__GNUC_MINOR__) && (__GNUC__ * 100 + __GNUC_MINOR__) >= 409
+#define JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
+#endif
+
 namespace jubatus {
 namespace core {
 namespace nearest_neighbor {
 
-std::vector<float> random_projection(
-    const common::sfv_t& sfv,
-    uint32_t hash_num);
+#ifndef JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
+std::vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num);
+#else
+std::vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num)
+  __attribute__((target("default")));
+std::vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num)
+  __attribute__((target("sse2")));
+std::vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num)
+  __attribute__((target("avx2")));
+#endif
+
 storage::bit_vector binarize(const std::vector<float>& proj);
 storage::bit_vector cosine_lsh(const common::sfv_t& sfv, uint32_t hash_num);
 
