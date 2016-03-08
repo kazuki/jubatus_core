@@ -66,7 +66,7 @@ vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num) {
   vector<float> proj(hash_num);
   for (size_t i = 0; i < sfv.size(); ++i) {
     const uint32_t seed = common::hash_util::calc_string_hash(sfv[i].first);
-    jubatus::util::math::random::mtrand rnd(seed);
+    jubatus::util::math::random::sfmt607rand rnd(seed);
     for (uint32_t j = 0; j < hash_num; ++j) {
       proj[j] += sfv[i].second * rnd.next_gaussian_float();
     }
@@ -86,7 +86,7 @@ vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num) {
   float grnd[8] __attribute__((aligned(16)));
   for (size_t i = 0; i < sfv.size(); ++i) {
     const uint32_t seed = common::hash_util::calc_string_hash(sfv[i].first);
-    jubatus::util::math::random::mtrand rnd(seed);
+    jubatus::util::math::random::sfmt607rand rnd(seed);
     const float v = sfv[i].second;
     __m128 v4 = _mm_set1_ps(v);
     uint32_t j = 0;
@@ -116,7 +116,7 @@ vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num) {
   float grnd[16] __attribute__((aligned(32)));
   for (size_t i = 0; i < sfv.size(); ++i) {
     const uint32_t seed = common::hash_util::calc_string_hash(sfv[i].first);
-    jubatus::util::math::random::mtrand rnd(seed);
+    jubatus::util::math::random::sfmt607rand rnd(seed);
     const float v = sfv[i].second;
     __m256 v8 = _mm256_set1_ps(v);
     uint32_t j = 0;
@@ -351,9 +351,7 @@ inline static void next_gaussian_float8(RND& g, float *out)
   __m128 a, b;
   {
     __m128i t[2] __attribute__((aligned(16)));
-    uint32_t *p = (uint32_t*)&(t[0]);
-    for (int i = 0; i < 8; ++i)
-      p[i] = g.next_int();
+    g.fill_int_unsafe((uint32_t*)&(t[0]), 8);
     a = _mm_cvtepi32_ps(_mm_srli_epi32(t[0], 8));
     b = _mm_cvtepi32_ps(_mm_srli_epi32(t[1], 8));
     __m128 c = _mm_unpacklo_ps(a, b);
@@ -597,9 +595,7 @@ inline static void next_gaussian_float16(RND& g, float *out)
   __m256 a, b;
   {
     __m256i t[2] __attribute__((aligned(32)));
-    uint32_t *p = (uint32_t*)&(t[0]);
-    for (int i = 0; i < 16; ++i)
-      p[i] = g.next_int();
+    g.fill_int_unsafe((uint32_t*)&(t[0]), 16);
     a = _mm256_cvtepi32_ps(_mm256_srli_epi32(t[0], 8));
     b = _mm256_cvtepi32_ps(_mm256_srli_epi32(t[1], 8));
     __m256 c = _mm256_unpacklo_ps(a, b);
