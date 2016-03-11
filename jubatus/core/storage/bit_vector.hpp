@@ -29,6 +29,10 @@
 #include "../common/big_endian.hpp"
 #include "storage_exception.hpp"
 
+#ifdef JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
+#include <nmmintrin.h>
+#endif
+
 namespace jubatus {
 namespace core {
 namespace storage {
@@ -74,29 +78,9 @@ struct bitcount_impl<T, 8> {
   }
 };
 
-#ifdef __POPCNT__
-
-inline int fast_bitcount(unsigned bits) {
-  return __builtin_popcount(bits);
-}
-
-inline int fast_bitcount(unsigned long bits) {  // NOLINT
-  return __builtin_popcountl(bits);
-}
-
-inline int fast_bitcount(unsigned long long bits) {  // NOLINT
-  return __builtin_popcountll(bits);
-}
-
-#endif
-
 template <class T>
 inline int bitcount_dispatcher(T bits) {
-#ifdef __POPCNT__
-  return fast_bitcount(bits);
-#else
   return bitcount_impl<T, sizeof(T)>::call(bits);
-#endif
 }
 
 inline int bitcount(unsigned bits) {
@@ -320,6 +304,9 @@ struct bit_vector_base {
     }
     return calc_hamming_distance_unsafe(bv.bits_);
   }
+#ifdef JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
+  __attribute__((target("default")))
+#endif
   uint64_t calc_hamming_distance_unsafe(const bit_base *bv) const {
     if (bits_ == NULL)
       return bit_count_unsafe(bv, used_bytes());
@@ -330,6 +317,34 @@ struct bit_vector_base {
     }
     return match_num;
   }
+#ifdef JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
+  __attribute__((target("popcnt")))
+  uint64_t calc_hamming_distance_unsafe(const bit_base *bv) const {
+    if (bits_ == NULL)
+      return bit_count_unsafe(bv, used_bytes());
+    size_t match_num = 0;
+#ifdef __x86_64__
+    int i, blocks = static_cast<int>(used_bytes() / sizeof(bit_base));
+    for (i = 0; i < blocks - 3; i += 4) {
+      match_num += _mm_popcnt_u64(bits_[i] ^ bv[i]);
+      match_num += _mm_popcnt_u64(bits_[i + 1] ^ bv[i + 1]);
+      match_num += _mm_popcnt_u64(bits_[i + 2] ^ bv[i + 2]);
+      match_num += _mm_popcnt_u64(bits_[i + 3] ^ bv[i + 3]);
+    }
+    for (; i < blocks; ++i) {
+      match_num += _mm_popcnt_u64(bits_[i] ^ bv[i]);
+    }
+#else // #ifdef __x86_64__
+    const uint32_t *p0 = (const uint32_t*)bits_;
+    const uint32_t *p1 = (const uint32_t*)bv;
+    for (size_t i = 0, blocks = used_bytes() / sizeof(uint32_t);
+         i < blocks; ++i) {
+      match_num += _mm_popcnt_u32(p0[i] ^ p1[i]);
+    }
+#endif // #ifdef __x86_64__
+    return match_num;
+  }
+#endif // #ifdef JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
   size_t bit_count() const {
     return bit_count_unsafe(bits_, used_bytes());
   }
@@ -456,6 +471,9 @@ struct bit_vector_base {
     memcpy(bits_, orig.bits_, used_bytes());
   }
 
+#ifdef JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
+  __attribute__((target("default")))
+#endif
   static size_t bit_count_unsafe(const bit_base *bits, size_t bytes) {
     if (bits == NULL) {
       return 0;
@@ -467,6 +485,35 @@ struct bit_vector_base {
     }
     return result;
   }
+
+#ifdef JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
+  __attribute__((target("popcnt")))
+  static size_t bit_count_unsafe(const bit_base *bits, size_t bytes) {
+    if (bits == NULL) {
+      return 0;
+    }
+    size_t result = 0;
+#ifdef __x86_64__
+    int i, blocks = static_cast<int>(bytes / sizeof(bit_base));
+    for (i = 0; i < blocks - 3; i += 4) {
+      result += _mm_popcnt_u64(bits[i]);
+      result += _mm_popcnt_u64(bits[i + 1]);
+      result += _mm_popcnt_u64(bits[i + 2]);
+      result += _mm_popcnt_u64(bits[i + 3]);
+    }
+    for (; i < blocks; ++i) {
+      result += _mm_popcnt_u64(bits[i]);
+    }
+#else // #ifdef __x86_64__
+    const uint32_t *p = (const uint32_t*)bits;
+    for (size_t i = 0, blocks = bytes / sizeof(uint32_t);
+         i < blocks; ++i) {
+      result += _mm_popcnt_u32(p[i]);
+    }
+#endif // #ifdef __x86_64__
+    return result;
+  }
+#endif // #ifdef JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
 
   bit_base* bits_;
   size_t bit_num_;

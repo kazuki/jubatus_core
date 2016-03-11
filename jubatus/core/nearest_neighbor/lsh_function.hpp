@@ -22,10 +22,6 @@
 #include "../common/type.hpp"
 #include "../storage/bit_vector.hpp"
 
-#if defined(__GNUC__) && defined(__GNUC_MINOR__) && (__GNUC__ * 100 + __GNUC_MINOR__) >= 409
-#define JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
-#endif
-
 namespace jubatus {
 namespace core {
 namespace nearest_neighbor {

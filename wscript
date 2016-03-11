@@ -48,6 +48,8 @@ def configure(conf):
   ver = env.CC_VERSION
   if env.COMPILER_CXX != 'g++' or int(ver[0]) < 4 or (int(ver[0]) == 4 and int(ver[1]) < 6):
     env.append_unique('CXXFLAGS', '-D_FORTIFY_SOURCE=1')
+  if env.COMPILER_CXX == 'g++' and (int(ver[0]) * 100 + int(ver[1])) >= 409:
+    conf.define('JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING', 1)
 
   conf.check_cxx(lib = 'pthread')
 
