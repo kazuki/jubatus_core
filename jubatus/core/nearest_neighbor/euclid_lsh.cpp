@@ -25,6 +25,7 @@
 #include "../storage/fixed_size_heap.hpp"
 #include "../storage/column_table.hpp"
 #include "lsh_function.hpp"
+#include "bit_vector_ranking.hpp"
 
 using std::map;
 using std::pair;
@@ -118,8 +119,8 @@ void euclid_lsh::set_config(const config& conf) {
     throw JUBATUS_EXCEPTION(
         common::invalid_parameter("1 <= hash_num"));
   }
-
   hash_num_ = conf.hash_num;
+  threads_ = read_threads_config(conf.threads);
 }
 
 void euclid_lsh::fill_schema(vector<column_type>& schema) {
@@ -142,14 +143,19 @@ void euclid_lsh::neighbor_row_from_hash(
     vector<pair<string, float> >& ids,
     uint64_t ret_num) const {
   jubatus::util::lang::shared_ptr<const column_table> table = get_const_table();
-
+  const_bit_vector_column& bv_col = lsh_column();
+  const_float_column& norm_col = norm_column();
+  const float denom = bv.bit_num();
   jubatus::core::storage::fixed_size_heap<pair<float, size_t> > heap(ret_num);
-  {
-    const_bit_vector_column& bv_col = lsh_column();
-    const_float_column& norm_col = norm_column();
 
-    const float denom = bv.bit_num();
-    for (size_t i = 0; i < table->size(); ++i) {
+#if __cplusplus >= 201103
+  auto f = [ret_num, denom, norm, &bv_col, &norm_col, &bv](size_t off, size_t end) {
+    jubatus::core::storage::fixed_size_heap<pair<float, size_t> > heap(ret_num);
+#else // #if __cplusplus >= 201103
+  const size_t off = 0, end = table->size();
+  {
+#endif // #if __cplusplus >= 201103
+    for (size_t i = off; i < end; ++i) {
       const size_t hamm_dist =
           bv.calc_hamming_distance_unsafe(bv_col.get_data_at_unsafe(i));
       const float theta = hamm_dist * M_PI / denom;
@@ -157,7 +163,13 @@ void euclid_lsh::neighbor_row_from_hash(
           norm_col[i] * (norm_col[i] - 2 * norm * std::cos(theta));
       heap.push(make_pair(score, i));
     }
+#if __cplusplus < 201103
   }
+#else // #if __cplusplus < 201103
+    return heap;
+  };
+  ranking_hamming_bit_vectors_internal(f, table->size(), threads_, heap);
+#endif // #if __cplusplus < 201103
 
   vector<pair<float, size_t> > sorted;
   heap.get_sorted(sorted);

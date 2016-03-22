@@ -53,6 +53,11 @@ class fixed_size_heap {
     }
   }
 
+  void merge(const fixed_size_heap<T, Comp>& other) {
+    for (size_t i = 0; i < other.data_.size(); ++i)
+      push(other.data_[i]);
+  }
+
   void get_sorted(std::vector<T>& v) const {
     std::vector<T> vec(data_);
     std::sort(vec.begin(), vec.end(), comp_);

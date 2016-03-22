@@ -35,12 +35,25 @@ void ranking_hamming_bit_vectors(
     const bit_vector& query,
     const const_bit_vector_column& bvs,
     vector<pair<uint64_t, float> >& ret,
-    uint64_t ret_num) {
+    uint64_t ret_num, uint32_t threads) {
   storage::fixed_size_heap<pair<uint32_t, uint64_t> > heap(ret_num);
+
+#if __cplusplus < 201103
   for (uint64_t i = 0; i < bvs.size(); ++i) {
     const size_t dist = query.calc_hamming_distance(bvs[i]);
     heap.push(make_pair(dist, i));
   }
+#else // #if __cplusplus < 201103
+  auto f = [ret_num, &query, &bvs](size_t off, size_t end) {
+    jubatus::core::storage::fixed_size_heap<pair<uint32_t, uint64_t> > heap(ret_num);
+    for (uint64_t i = off; i < end; ++i) {
+      const size_t dist = query.calc_hamming_distance(bvs[i]);
+      heap.push(make_pair(dist, i));
+    }
+    return heap;
+  };
+  ranking_hamming_bit_vectors_internal(f, bvs.size(), threads, heap);
+#endif // #if __cplusplus < 201103
 
   vector<pair<uint32_t, uint64_t> > sorted;
   heap.get_sorted(sorted);
