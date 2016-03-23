@@ -47,8 +47,8 @@ void ranking_hamming_bit_vectors_internal(
     Function& f, size_t size, uint32_t threads, THeap& heap
 ) {
   typedef std::vector<jubatus::util::lang::shared_ptr<jubatus::core::common::thread_pool::future<THeap> > > future_list_t;
-  size_t block_size = static_cast<size_t>(std::ceil(size / static_cast<float>(threads)));
   if (threads > 1) {
+    size_t block_size = static_cast<size_t>(std::ceil(size / static_cast<float>(threads)));
     std::vector<jubatus::util::lang::function<THeap()> > funcs;
     funcs.reserve(size / block_size + 1);
     for (size_t t = 0, end = 0; t < threads && end < size ; ++t) {

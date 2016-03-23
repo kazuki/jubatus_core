@@ -18,8 +18,10 @@
 #include "jubatus/util/math/random.h"
 #include "../common/hash.hpp"
 #include "../common/type.hpp"
+#include "../common/thread_pool.hpp"
 #include "../storage/bit_vector.hpp"
 #include "lsh_function.hpp"
+#include "bit_vector_ranking.hpp"
 
 #if defined(JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING)
 #include <immintrin.h>
@@ -38,7 +40,25 @@ inline static void next_gaussian_float8(RND& g, float *out);
 #ifdef JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
 template <class RND> __attribute__((target("avx2")))
 inline static void next_gaussian_float16(RND& g, float *out);
+
+static std::vector<float> random_projection_internal(
+  const jubatus::core::common::sfv_t& sfv, uint32_t hash_num, size_t start, size_t end)
+  __attribute__((target("default")));
+static std::vector<float> random_projection_internal(
+  const jubatus::core::common::sfv_t& sfv, uint32_t hash_num, size_t start, size_t end)
+  __attribute__((target("sse2")));
+static std::vector<float> random_projection_internal(
+  const jubatus::core::common::sfv_t& sfv, uint32_t hash_num, size_t start, size_t end)
+  __attribute__((target("avx2")));
+#else
+static std::vector<float> random_projection_internal(
+  const jubatus::core::common::sfv_t& sfv, uint32_t hash_num, size_t start, size_t end);
 #endif
+static std::vector<float> random_projection_dispatcher(
+  const jubatus::core::common::sfv_t *sfv, uint32_t hash_num, size_t start, size_t end)
+{
+  return random_projection_internal(*sfv, hash_num, start, end);
+}
 
 namespace jubatus {
 namespace core {
@@ -54,18 +74,49 @@ bit_vector binarize(const vector<float>& proj) {
   return bv;
 }
 
-bit_vector cosine_lsh(const common::sfv_t& sfv, uint32_t hash_num) {
-  return binarize(random_projection(sfv, hash_num));
+bit_vector cosine_lsh(const common::sfv_t& sfv, uint32_t hash_num, uint32_t threads) {
+  return binarize(random_projection(sfv, hash_num, threads));
 }
+
+vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num, uint32_t threads) {
+  typedef std::vector<jubatus::util::lang::shared_ptr<jubatus::core::common::thread_pool::future<std::vector<float> > > > future_list_t;
+  if (threads > 1 && sfv.size() > 0) {
+    size_t block_size = static_cast<size_t>(std::ceil(sfv.size() / static_cast<float>(threads)));
+    vector<float> proj(hash_num);
+    std::vector<jubatus::util::lang::function<std::vector<float>()> > funcs;
+    funcs.reserve(sfv.size() / block_size + 1);
+    for (size_t t = 0, end = 0; t < threads && end < sfv.size() ; ++t) {
+      size_t off = end;
+      end += std::min(block_size, sfv.size() - off);
+      funcs.push_back(jubatus::util::lang::bind(
+        &random_projection_dispatcher, &sfv, hash_num, off, end));
+    }
+    future_list_t futures = jubatus::core::common::default_thread_pool::async_all(funcs);
+    for (typename future_list_t::iterator it = futures.begin(); it != futures.end(); ++it) {
+      const std::vector<float>& pj = (*it)->get();
+      for (size_t i = 0; i < proj.size(); ++i)
+        proj[i] += pj[i];
+    }
+    return proj;
+  } else {
+    return random_projection_internal(sfv, hash_num, 0, sfv.size());
+  }
+}
+
+}  // namespace nearest_neighbor
+}  // namespace core
+}  // namespace jubatus
 
 #if !defined(__SSE2__) || defined(JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING)
 #ifdef JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
 __attribute__((target("default")))
 #endif
-vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num) {
+vector<float> random_projection_internal(
+  const jubatus::core::common::sfv_t& sfv, uint32_t hash_num, size_t start, size_t end)
+{
   vector<float> proj(hash_num);
-  for (size_t i = 0; i < sfv.size(); ++i) {
-    const uint32_t seed = common::hash_util::calc_string_hash(sfv[i].first);
+  for (size_t i = start; i < end; ++i) {
+    const uint32_t seed = jubatus::core::common::hash_util::calc_string_hash(sfv[i].first);
     jubatus::util::math::random::sfmt607rand rnd(seed);
     for (uint32_t j = 0; j < hash_num; ++j) {
       proj[j] += sfv[i].second * rnd.next_gaussian_float();
@@ -79,13 +130,15 @@ vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num) {
 #ifdef JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
 __attribute__((target("sse2")))
 #endif
-vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num) {
+vector<float> random_projection_internal(
+  const jubatus::core::common::sfv_t& sfv, uint32_t hash_num, size_t start, size_t end)
+{
   std::vector<float> proj(hash_num);
   float *p = const_cast<float*>(proj.data());
-  uint32_t hash_num_sse = hash_num & 0xfffffff8;
+  const uint32_t hash_num_sse = hash_num & 0xfffffff8;
   float grnd[8] __attribute__((aligned(16)));
-  for (size_t i = 0; i < sfv.size(); ++i) {
-    const uint32_t seed = common::hash_util::calc_string_hash(sfv[i].first);
+  for (size_t i = start; i < end; ++i) {
+    const uint32_t seed = jubatus::core::common::hash_util::calc_string_hash(sfv[i].first);
     jubatus::util::math::random::sfmt607rand rnd(seed);
     const float v = sfv[i].second;
     __m128 v4 = _mm_set1_ps(v);
@@ -109,13 +162,15 @@ vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num) {
 
 #ifdef JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
 __attribute__((target("avx2")))
-vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num) {
+vector<float> random_projection_internal(
+  const jubatus::core::common::sfv_t& sfv, uint32_t hash_num, size_t start, size_t end)
+{
   std::vector<float> proj(hash_num);
   float *p = const_cast<float*>(proj.data());
   uint32_t hash_num_avx = hash_num & 0xfffffff0;
   float grnd[16] __attribute__((aligned(32)));
-  for (size_t i = 0; i < sfv.size(); ++i) {
-    const uint32_t seed = common::hash_util::calc_string_hash(sfv[i].first);
+  for (size_t i = start; i < end; ++i) {
+    const uint32_t seed = jubatus::core::common::hash_util::calc_string_hash(sfv[i].first);
     jubatus::util::math::random::sfmt607rand rnd(seed);
     const float v = sfv[i].second;
     __m256 v8 = _mm256_set1_ps(v);
@@ -136,10 +191,6 @@ vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num) {
   return proj;
 }
 #endif // #ifdef JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
-
-}  // namespace nearest_neighbor
-}  // namespace core
-}  // namespace jubatus
 
 #if defined(__SSE2__) || defined(JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING)
 
