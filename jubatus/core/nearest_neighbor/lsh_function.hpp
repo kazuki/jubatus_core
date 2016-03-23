@@ -26,19 +26,9 @@ namespace jubatus {
 namespace core {
 namespace nearest_neighbor {
 
-#ifndef JUBATUS_ENABLED_FUNCTION_MULTIVERSIONING
-std::vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num);
-#else
-std::vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num)
-  __attribute__((target("default")));
-std::vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num)
-  __attribute__((target("sse2")));
-std::vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num)
-  __attribute__((target("avx2")));
-#endif
-
+std::vector<float> random_projection(const common::sfv_t& sfv, uint32_t hash_num, uint32_t threads);
 storage::bit_vector binarize(const std::vector<float>& proj);
-storage::bit_vector cosine_lsh(const common::sfv_t& sfv, uint32_t hash_num);
+storage::bit_vector cosine_lsh(const common::sfv_t& sfv, uint32_t hash_num, uint32_t threads);
 
 }  // namespace nearest_neighbor
 }  // namespace core
