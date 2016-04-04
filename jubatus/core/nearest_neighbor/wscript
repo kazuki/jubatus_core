@@ -8,6 +8,7 @@ def configure(conf):
 def build(bld):
   source = [
       'nearest_neighbor_base.cpp',
+      'column_table_nearest_neighbor_base.cpp',
       'nearest_neighbor_factory.cpp',
       'bit_vector_nearest_neighbor_base.cpp',
       'bit_vector_ranking.cpp',
@@ -26,6 +27,7 @@ def build(bld):
       'minhash.hpp',
       'nearest_neighbor.hpp',
       'nearest_neighbor_base.hpp',
+      'column_table_nearest_neighbor_base.hpp',
       'nearest_neighbor_factory.hpp',
       ]
   use = ['jubatus_util']
@@ -38,7 +40,7 @@ def build(bld):
     target = 'nearest_neighbor_base_test',
     features = 'gtest',
     source = [
-      'nearest_neighbor_base_test.cpp',
+      'column_table_nearest_neighbor_base_test.cpp',
       'bit_vector_nearest_neighbor_base_test.cpp',
       'nearest_neighbor_test.cpp',
     ],

@@ -420,10 +420,9 @@ vector<shared_ptr<classifier_base> > create_nn_classifiers() {
   json js(new json_object);
   js["hash_num"] = to_json(64);
   core::common::jsonconfig::config conf(js);
-  shared_ptr<storage::column_table> table(new storage::column_table);
   shared_ptr<nearest_neighbor::nearest_neighbor_base>
       nearest_neighbor_engine(nearest_neighbor::create_nearest_neighbor(
-          "lsh", conf, table, ""));
+          "lsh", conf, ""));
   method.push_back(shared_ptr<classifier_base>(
       new core::classifier::nearest_neighbor_classifier(
           nearest_neighbor_engine, 3, 1.f)));

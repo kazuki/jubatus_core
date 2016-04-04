@@ -62,10 +62,9 @@ shared_ptr<nearest_neighbor_classifier>
   json nn_parameter(new json_object);
   nn_parameter["hash_num"] = to_json(512);
 
-  shared_ptr<storage::column_table> table(new storage::column_table);
   shared_ptr<nearest_neighbor::nearest_neighbor_base>
       nn_engine(nearest_neighbor::create_nearest_neighbor(
-          nn_method, config(nn_parameter), table, ""));
+          nn_method, config(nn_parameter), ""));
   return shared_ptr<nearest_neighbor_classifier>(
       new nearest_neighbor_classifier(nn_engine, 3, 1.0f));
 }

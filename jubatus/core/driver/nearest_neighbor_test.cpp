@@ -102,8 +102,6 @@ create_nearest_neighbor_bases() {
     pattern.push_back(make_pair("minhash", i));
   }
   for (size_t i = 0; i < pattern.size(); ++i) {
-    shared_ptr<column_table> table(new column_table);
-
     json jsconf(new json_object);
     jsconf["hash_num"] = new json_integer(pattern[i].second);
     common::jsonconfig::config conf(jsconf);
@@ -111,7 +109,6 @@ create_nearest_neighbor_bases() {
         core::nearest_neighbor::create_nearest_neighbor(
             pattern[i].first,
             conf,
-            table,
             id));
   }
   return nearest_neighbors;

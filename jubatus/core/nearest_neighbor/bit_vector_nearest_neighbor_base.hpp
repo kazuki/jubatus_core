@@ -22,7 +22,7 @@
 #include <utility>
 #include <vector>
 #include "jubatus/util/lang/shared_ptr.h"
-#include "nearest_neighbor_base.hpp"
+#include "column_table_nearest_neighbor_base.hpp"
 
 namespace jubatus {
 namespace core {
@@ -31,7 +31,7 @@ class column_table;
 }
 namespace nearest_neighbor {
 
-class bit_vector_nearest_neighbor_base : public nearest_neighbor_base {
+class bit_vector_nearest_neighbor_base : public column_table_nearest_neighbor_base {
  public:
   bit_vector_nearest_neighbor_base(
       uint32_t bitnum,

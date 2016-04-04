@@ -70,10 +70,6 @@ class nearest_neighbor_recommender : public recommender_base {
 
  private:
   void unlearn_row(const std::string& id);
-  jubatus::util::lang::shared_ptr<storage::column_table> get_table();
-  jubatus::util::lang::shared_ptr<const storage::column_table>
-      get_const_table() const;
-
   jubatus::util::lang::shared_ptr<unlearner::unlearner_base> get_unlearner();
 
  private:

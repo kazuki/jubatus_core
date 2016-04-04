@@ -87,11 +87,9 @@ shared_ptr<anomaly_base> anomaly_factory::create_anomaly(
   } else if (name == "light_lof") {
     light_lof_config conf = config_cast_check<light_lof_config>(param);
 
-    jubatus::util::lang::shared_ptr<storage::column_table>
-        nearest_neighbor_table(new storage::column_table);
     jubatus::util::lang::shared_ptr<nearest_neighbor::nearest_neighbor_base>
         nearest_neighbor_engine(nearest_neighbor::create_nearest_neighbor(
-            conf.method, conf.parameter, nearest_neighbor_table, id));
+            conf.method, conf.parameter, id));
 
     if (conf.unlearner) {
       if (!conf.unlearner_parameter) {

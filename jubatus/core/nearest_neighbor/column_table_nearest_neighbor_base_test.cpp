@@ -22,7 +22,7 @@
 
 #include "jubatus/util/lang/scoped_ptr.h"
 
-#include "nearest_neighbor_base.hpp"
+#include "column_table_nearest_neighbor_base.hpp"
 
 namespace jubatus {
 namespace core {
@@ -33,11 +33,11 @@ using std::vector;
 using std::pair;
 using std::make_pair;
 
-class nearest_neighbor_mock : public nearest_neighbor_base {
+class column_table_nearest_neighbor_mock : public column_table_nearest_neighbor_base {
  public:
-  explicit nearest_neighbor_mock(
+  explicit column_table_nearest_neighbor_mock(
       jubatus::util::lang::shared_ptr<storage::column_table> table)
-      : nearest_neighbor_base(table, "test") {}
+      : column_table_nearest_neighbor_base(table, "test") {}
 
   void add_next_answer(const string& id, float dist) {
     answer_.push_back(make_pair(id, dist));
@@ -73,32 +73,32 @@ class nearest_neighbor_mock : public nearest_neighbor_base {
   vector<pair<string, float> > answer_;
 };
 
-class nearest_neighbor_base_test : public testing::Test {
+class column_table_nearest_neighbor_base_test : public testing::Test {
  protected:
   virtual void SetUp() {
     ct_.reset(new storage::column_table);
-    mock_.reset(new nearest_neighbor_mock(ct_));
+    mock_.reset(new column_table_nearest_neighbor_mock(ct_));
   }
 
   jubatus::util::lang::shared_ptr<storage::column_table> ct_;
-  jubatus::util::lang::scoped_ptr<nearest_neighbor_mock> mock_;
+  jubatus::util::lang::scoped_ptr<column_table_nearest_neighbor_mock> mock_;
 };
 
-TEST_F(nearest_neighbor_base_test, get_table) {
+TEST_F(column_table_nearest_neighbor_base_test, get_table) {
   EXPECT_EQ(ct_, mock_->get_table());
 }
 
-TEST_F(nearest_neighbor_base_test, get_const_table) {
-  const nearest_neighbor_base* cmock = mock_.get();
+TEST_F(column_table_nearest_neighbor_base_test, get_const_table) {
+  const column_table_nearest_neighbor_base* cmock = mock_.get();
   EXPECT_EQ(ct_, cmock->get_const_table());
 }
 
-TEST_F(nearest_neighbor_base_test, order_of_calc_similarity) {
+TEST_F(column_table_nearest_neighbor_base_test, order_of_calc_similarity) {
   EXPECT_GT(mock_->calc_similarity(0), mock_->calc_similarity(0.5));
   EXPECT_GT(mock_->calc_similarity(0.5), mock_->calc_similarity(1));
 }
 
-TEST_F(nearest_neighbor_base_test, similar_row) {
+TEST_F(column_table_nearest_neighbor_base_test, similar_row) {
   mock_->add_next_answer("a", 0);
   mock_->add_next_answer("a", 0.25);
   mock_->add_next_answer("a", 0.5);

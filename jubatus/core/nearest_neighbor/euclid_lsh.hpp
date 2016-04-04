@@ -24,7 +24,7 @@
 #include "jubatus/util/data/serialization.h"
 #include "jubatus/util/data/optional.h"
 #include "jubatus/util/lang/shared_ptr.h"
-#include "nearest_neighbor_base.hpp"
+#include "column_table_nearest_neighbor_base.hpp"
 #include "lsh_function.hpp"
 
 namespace jubatus {
@@ -34,7 +34,7 @@ class column_table;
 }
 namespace nearest_neighbor {
 
-class euclid_lsh : public nearest_neighbor_base {
+class euclid_lsh : public column_table_nearest_neighbor_base {
  public:
   struct config {
     config()

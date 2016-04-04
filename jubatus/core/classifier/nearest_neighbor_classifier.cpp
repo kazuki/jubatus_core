@@ -158,21 +158,21 @@ bool nearest_neighbor_classifier::delete_label(const std::string& label) {
     }
   }
 
-  shared_ptr<storage::column_table> table =
-      nearest_neighbor_engine_->get_table();
+  std::vector<std::string> ids;
+  nearest_neighbor_engine_->get_all_row_ids(ids);
 
   std::vector<std::string> ids_to_be_deleted;
-  for (size_t i = 0, n = table->size(); i < n; ++i) {
-    std::string id = table->get_key(i);
-    std::string l = get_label_from_id(id);
+  for (std::vector<std::string>::const_iterator it = ids.begin();
+       it != ids.end(); ++it) {
+    std::string l = get_label_from_id(*it);
     if (l == label) {
-      ids_to_be_deleted.push_back(id);
+      ids_to_be_deleted.push_back(*it);
     }
   }
 
   for (size_t i = 0, n = ids_to_be_deleted.size(); i < n; ++i) {
     const std::string& id = ids_to_be_deleted[i];
-    table->delete_row(id);
+    nearest_neighbor_engine_->delete_row(id);
     if (unlearner_) {
       unlearner_->remove(id);
     }
@@ -253,7 +253,7 @@ framework::mixable* nearest_neighbor_classifier::get_mixable() {
 }
 
 void nearest_neighbor_classifier::unlearn_id(const std::string& id) {
-  nearest_neighbor_engine_->get_table()->delete_row(id);
+  nearest_neighbor_engine_->delete_row(id);
 }
 
 }  // namespace classifier

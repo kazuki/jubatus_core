@@ -57,10 +57,6 @@ class nearest_neighbor : public driver_base {
         fv_converter::datum_to_fv_converter> converter,
     jubatus::util::lang::shared_ptr<unlearner::unlearner_base> unlearner);
 
-  jubatus::util::lang::shared_ptr<storage::column_table> get_table();
-  jubatus::util::lang::shared_ptr<const storage::column_table>
-  get_const_table() const;
-
   void set_row(const std::string& id, const fv_converter::datum& datum);
 
   std::vector<std::pair<std::string, float> >

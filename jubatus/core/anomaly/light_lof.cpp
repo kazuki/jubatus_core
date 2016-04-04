@@ -85,7 +85,6 @@ light_lof::light_lof(
     const std::string& id,
     shared_ptr<nearest_neighbor_base> nearest_neighbor_engine)
     : nearest_neighbor_engine_(nearest_neighbor_engine),
-      mixable_nearest_neighbor_(new framework::mixable_versioned_table),
       mixable_scores_(new framework::mixable_versioned_table),
       config_(conf),
       my_id_(id) {
@@ -101,7 +100,6 @@ light_lof::light_lof(
             "nearest_neighbor_num <= reverse_nearest_neighbor_num"));
   }
 
-  mixable_nearest_neighbor_->set_model(nearest_neighbor_engine_->get_table());
   mixable_scores_->set_model(create_lof_table());
 }
 
@@ -112,17 +110,13 @@ light_lof::light_lof(
     shared_ptr<unlearner::unlearner_base> unlearner)
     : nearest_neighbor_engine_(nearest_neighbor_engine),
       unlearner_(unlearner),
-      mixable_nearest_neighbor_(new framework::mixable_versioned_table),
       mixable_scores_(new framework::mixable_versioned_table),
       config_(conf),
       my_id_(id) {
-  shared_ptr<column_table> nn_table = nearest_neighbor_engine_->get_table();
   shared_ptr<column_table> lof_table = create_lof_table();
   unlearner_->set_callback(bind(
       &light_lof::unlearn, this, jubatus::util::lang::_1));
 
-  mixable_nearest_neighbor_->set_model(nn_table);
-  mixable_nearest_neighbor_->set_unlearner(unlearner_);
   mixable_scores_->set_model(lof_table);
   mixable_scores_->set_unlearner(unlearner_);
 }
@@ -245,7 +239,7 @@ void light_lof::unlearn(const std::string& key) {
   collect_neighbors(key, reverse_knn);
   reverse_knn.erase(key);
 
-  mixable_nearest_neighbor_->get_model()->delete_row(key);
+  nearest_neighbor_engine_->delete_row(key);
   mixable_scores_->get_model()->delete_row(key);
 
   update_entries(reverse_knn);

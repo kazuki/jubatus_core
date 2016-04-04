@@ -65,7 +65,7 @@ euclid_lsh::euclid_lsh(
     const config& conf,
     jubatus::util::lang::shared_ptr<column_table> table,
     const std::string& id)
-    : nearest_neighbor_base(table, id) {
+    : column_table_nearest_neighbor_base(table, id) {
   set_config(conf);
 
   vector<column_type> schema;
@@ -78,7 +78,7 @@ euclid_lsh::euclid_lsh(
     jubatus::util::lang::shared_ptr<column_table> table,
     vector<column_type>& schema,
     const std::string& id)
-    : nearest_neighbor_base(table, id) {
+    : column_table_nearest_neighbor_base(table, id) {
   set_config(conf);
   fill_schema(schema);
 }
