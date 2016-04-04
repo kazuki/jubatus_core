@@ -19,6 +19,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "jubatus/util/lang/bind.h"
 #include "../storage/row_deleter.hpp"
 #include "../fv_converter/datum_to_fv_converter.hpp"
 #include "../fv_converter/weight_manager.hpp"
@@ -32,6 +33,10 @@ namespace driver {
 using jubatus::util::lang::shared_ptr;
 using fv_converter::mixable_weight_manager;
 using fv_converter::weight_manager;
+
+static void nn_deleter(shared_ptr<core::nearest_neighbor::nearest_neighbor_base> nn, const std::string& key) {
+  nn->delete_row(key);
+}
 
 nearest_neighbor::nearest_neighbor(
     shared_ptr<core::nearest_neighbor::nearest_neighbor_base> nn,
@@ -57,16 +62,8 @@ nearest_neighbor::nearest_neighbor(
   register_mixable(&wm_);
 
   converter_->set_weight_manager(wm_.get_model());
-  unlearner->set_callback(storage::row_deleter(nn_->get_table()));
-}
-
-shared_ptr<storage::column_table> nearest_neighbor::get_table() {
-  return nn_->get_table();
-}
-
-shared_ptr<const storage::column_table>
-nearest_neighbor::get_const_table() const {
-  return nn_->get_const_table();
+  unlearner->set_callback(jubatus::util::lang::bind(nn_deleter, nn_,
+                                                    jubatus::util::lang::_1));
 }
 
 void nearest_neighbor::set_row(

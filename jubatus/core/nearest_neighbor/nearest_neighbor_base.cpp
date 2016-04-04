@@ -20,43 +20,17 @@
 
 #include "exception.hpp"
 #include "nearest_neighbor_base.hpp"
-#include "../storage/column_table.hpp"
-#include "jubatus/util/concurrent/rwmutex.h"
 
 using std::pair;
 using std::string;
 using std::vector;
-using jubatus::util::lang::shared_ptr;
 
 namespace jubatus {
 namespace core {
 namespace nearest_neighbor {
 
-nearest_neighbor_base::nearest_neighbor_base(
-    shared_ptr<storage::column_table> table,
-    const std::string& id)
-    : my_id_(id),
-      mixable_table_(new framework::mixable_versioned_table) {
-  mixable_table_->set_model(table);
-}
-
-void nearest_neighbor_base::get_all_row_ids(vector<string>& ids) const {
-  vector<string> ret;
-  shared_ptr<const storage::column_table> table = get_const_table();
-  util::concurrent::scoped_rlock lk(table->get_mutex());
-
-  /* table lock acquired; all subsequent table operations must be nolock */
-
-  uint64_t table_size = table->size_nolock();
-  ret.reserve(table_size);
-  for (size_t i = 0; i < table_size; ++i) {
-    ret.push_back(table->get_key_nolock(i));
-  }
-  ret.swap(ids);
-}
-
-void nearest_neighbor_base::clear() {
-  mixable_table_->get_model()->clear();  // lock acquired inside
+nearest_neighbor_base::nearest_neighbor_base(const std::string& id)
+    : my_id_(id) {
 }
 
 void nearest_neighbor_base::similar_row(
@@ -77,18 +51,6 @@ void nearest_neighbor_base::similar_row(
   for (size_t i = 0; i < ids.size(); ++i) {
     ids[i].second = calc_similarity(ids[i].second);
   }
-}
-
-void nearest_neighbor_base::pack(framework::packer& packer) const {
-  get_const_table()->pack(packer);  // lock acquired inside
-}
-
-void nearest_neighbor_base::unpack(msgpack::object o) {
-  get_table()->unpack(o);  // lock acquired inside
-}
-
-framework::mixable* nearest_neighbor_base::get_mixable() const {
-  return mixable_table_.get();
 }
 
 }  // namespace nearest_neighbor

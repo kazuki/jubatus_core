@@ -34,7 +34,6 @@ class nearest_neighbor_base;
 jubatus::util::lang::shared_ptr<nearest_neighbor_base> create_nearest_neighbor(
     const std::string& name,
     const common::jsonconfig::config& config,
-    jubatus::util::lang::shared_ptr<storage::column_table> table,
     const std::string& id);
 
 }  // namespace nearest_neighbor

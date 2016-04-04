@@ -78,9 +78,8 @@ class nearest_neighbor_test
 
       using common::jsonconfig::config;
 
-      table_.reset(new storage::column_table);
       nn_ = create_nearest_neighbor(
-          name, config(config_js, ""), table_, "localhost");
+          name, config(config_js, ""), "localhost");
     } catch (common::jsonconfig::cast_check_error& e) {
       std::cout << "In Setup():" <<e.what() << '\n';
       vector<shared_ptr<common::jsonconfig::config_error> > v = e.errors();
@@ -91,15 +90,11 @@ class nearest_neighbor_test
     }
   }
 
-  storage::column_table* get_table() {
-    return table_.get();
-  }
   nearest_neighbor_base* get_nn() {
     return nn_.get();
   }
 
  private:
-  shared_ptr<storage::column_table> table_;
   shared_ptr<nearest_neighbor_base> nn_;
 };
 

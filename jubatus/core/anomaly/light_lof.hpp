@@ -138,9 +138,6 @@ class light_lof : public anomaly_base {
       nearest_neighbor_engine_;
   jubatus::util::lang::shared_ptr<unlearner::unlearner_base> unlearner_;
 
-  // Mixable of nearest neighbor model.
-  jubatus::util::lang::shared_ptr<framework::mixable_versioned_table>
-      mixable_nearest_neighbor_;
   // Mixable of score table that contains k-dists and LRDs.
   jubatus::util::lang::shared_ptr<framework::mixable_versioned_table>
       mixable_scores_;

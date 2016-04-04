@@ -84,7 +84,7 @@ void nearest_neighbor_recommender::clear() {
 
 void nearest_neighbor_recommender::clear_row(const std::string& id) {
   orig_.remove_row(id);
-  get_table()->delete_row(id);
+  nearest_neighbor_engine_->delete_row(id);
   if (unlearner_) {
     unlearner_->remove(id);
   }
@@ -95,7 +95,7 @@ void nearest_neighbor_recommender::clear_row(const std::string& id) {
  */
 void nearest_neighbor_recommender::unlearn_row(const std::string& id) {
   orig_.remove_row(id);
-  get_table()->delete_row(id);
+  nearest_neighbor_engine_->delete_row(id);
 }
 
 void nearest_neighbor_recommender::update_row(
@@ -139,16 +139,6 @@ void nearest_neighbor_recommender::unpack(msgpack::object o) {
   }
   orig_.unpack(o.via.array.ptr[0]);
   nearest_neighbor_engine_->unpack(o.via.array.ptr[1]);
-}
-
-jubatus::util::lang::shared_ptr<storage::column_table>
-nearest_neighbor_recommender::get_table() {
-  return nearest_neighbor_engine_->get_table();
-}
-
-jubatus::util::lang::shared_ptr<const storage::column_table>
-nearest_neighbor_recommender::get_const_table() const {
-  return nearest_neighbor_engine_->get_const_table();
 }
 
 jubatus::util::lang::shared_ptr<unlearner::unlearner_base>
