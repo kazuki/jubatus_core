@@ -49,6 +49,10 @@ shared_ptr<nearest_neighbor_base> create_nearest_neighbor(
     return shared_ptr<nearest_neighbor_base>(
         new minhash(config_cast_check<minhash::config>(config),
                     shared_ptr<storage::column_table>(new storage::column_table), id));
+  } else if (name == "inverted_index") {
+    return shared_ptr<nearest_neighbor_base>(new inverted_index(id));
+  } else if (name == "inverted_index_euclid") {
+    return shared_ptr<nearest_neighbor_base>(new inverted_index_euclid(id));
   } else {
     throw JUBATUS_EXCEPTION(common::unsupported_method(name));
   }

@@ -20,5 +20,7 @@
 #include "euclid_lsh.hpp"
 #include "lsh.hpp"
 #include "minhash.hpp"
+#include "inverted_index.hpp"
+#include "inverted_index_euclid.hpp"
 
 #endif  // JUBATUS_CORE_NEAREST_NEIGHBOR_NEAREST_NEIGHBOR_HPP_

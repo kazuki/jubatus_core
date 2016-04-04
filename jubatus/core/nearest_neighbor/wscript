@@ -15,7 +15,9 @@ def build(bld):
       'minhash.cpp',
       'lsh.cpp',
       'lsh_function.cpp',
-      'euclid_lsh.cpp'
+      'euclid_lsh.cpp',
+      'inverted_index.cpp',
+      'inverted_index_euclid.cpp'
     ]
   headers = [
       'bit_vector_nearest_neighbor_base.hpp',
@@ -25,6 +27,8 @@ def build(bld):
       'lsh.hpp',
       'lsh_function.hpp',
       'minhash.hpp',
+      'inverted_index.hpp',
+      'inverted_index_euclid.hpp',
       'nearest_neighbor.hpp',
       'nearest_neighbor_base.hpp',
       'column_table_nearest_neighbor_base.hpp',
