@@ -33,6 +33,15 @@ shared_ptr<nearest_neighbor_base> create_nearest_neighbor(
     const std::string& name,
     const common::jsonconfig::config& config,
     const std::string& id) {
+  shared_ptr<unlearner::unlearner_base> null_ptr;
+  return create_nearest_neighbor(name, config, id, null_ptr);
+}
+
+shared_ptr<nearest_neighbor_base> create_nearest_neighbor(
+    const std::string& name,
+    const common::jsonconfig::config& config,
+    const std::string& id,
+    const shared_ptr<unlearner::unlearner_base>& unl) {
 
   using common::jsonconfig::config_cast_check;
 
@@ -53,9 +62,9 @@ shared_ptr<nearest_neighbor_base> create_nearest_neighbor(
         new minhash(config_cast_check<minhash::config>(config),
                     shared_ptr<storage::column_table>(new storage::column_table), id));
   } else if (name == "inverted_index") {
-    return shared_ptr<nearest_neighbor_base>(new inverted_index(id));
+    return shared_ptr<nearest_neighbor_base>(new inverted_index(id, unl));
   } else if (name == "inverted_index_euclid") {
-    return shared_ptr<nearest_neighbor_base>(new inverted_index_euclid(id));
+    return shared_ptr<nearest_neighbor_base>(new inverted_index_euclid(id, unl));
   } else {
     throw JUBATUS_EXCEPTION(common::unsupported_method(name));
   }

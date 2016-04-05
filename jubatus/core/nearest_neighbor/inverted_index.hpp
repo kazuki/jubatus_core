@@ -24,6 +24,7 @@
 #include <vector>
 #include "nearest_neighbor_base.hpp"
 #include "../storage/inverted_index_storage.hpp"
+#include "../unlearner/unlearner_base.hpp"
 
 namespace jubatus {
 namespace core {
@@ -32,6 +33,8 @@ namespace nearest_neighbor {
 class inverted_index : public nearest_neighbor_base {
 public:
   explicit inverted_index(const std::string& id);
+  inverted_index(const std::string& id,
+                 const jubatus::util::lang::shared_ptr<unlearner::unlearner_base> &unl);
   virtual ~inverted_index();
 
   virtual void get_all_row_ids(std::vector<std::string>& ids) const;
@@ -55,9 +58,12 @@ public:
 
   virtual framework::mixable* get_mixable() const;
 
+  virtual void setup_original_storage(const jubatus::util::lang::shared_ptr<storage::sparse_matrix_storage> &orig);
+
 protected:
   jubatus::util::lang::shared_ptr<storage::mixable_inverted_index_storage>
     mixable_storage_;
+  jubatus::util::lang::shared_ptr<storage::sparse_matrix_storage> orig_;
 };
 
 }  // namespace nearest_neighbor

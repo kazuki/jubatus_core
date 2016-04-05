@@ -1,4 +1,4 @@
-#if 0
+#if 0 // TODO(kazuki)
 // Jubatus: Online machine learning framework for distributed environment
 // Copyright (C) 2012 Preferred Networks and Nippon Telegraph and Telephone Corporation.
 //

@@ -34,7 +34,8 @@ namespace recommender {
 
 const uint64_t recommender_base::complete_row_similar_num_ = 128;
 
-recommender_base::recommender_base() {
+recommender_base::recommender_base()
+  : orig_(new core::storage::sparse_matrix_storage) {
 }
 
 recommender_base::~recommender_base() {
@@ -45,7 +46,7 @@ void recommender_base::similar_row(
     size_t ret_num) const {
   ids.clear();
   common::sfv_t sfv;
-  orig_.get_row(id, sfv);
+  orig_->get_row(id, sfv);
   similar_row(sfv, ids, ret_num);
 }
 
@@ -55,21 +56,21 @@ void recommender_base::neighbor_row(
     size_t ret_num) const {
   ids.clear();
   common::sfv_t sfv;
-  orig_.get_row(id, sfv);
+  orig_->get_row(id, sfv);
   neighbor_row(sfv, ids, ret_num);
 }
 
 void recommender_base::decode_row(const std::string& id,
                                   common::sfv_t& ret) const {
   ret.clear();
-  orig_.get_row(id, ret);
+  orig_->get_row(id, ret);
 }
 
 void recommender_base::complete_row(const std::string& id,
                                     common::sfv_t& ret) const {
   ret.clear();
   common::sfv_t sfv;
-  orig_.get_row(id, sfv);
+  orig_->get_row(id, sfv);
   complete_row(sfv, ret);
 }
 
@@ -85,7 +86,7 @@ void recommender_base::complete_row(const common::sfv_t& query,
   size_t exist_row_num = 0;
   for (size_t i = 0; i < ids.size(); ++i) {
     common::sfv_t row;
-    orig_.get_row(ids[i].first, row);
+    orig_->get_row(ids[i].first, row);
     if (row.size() == 0) {
       continue;
     } else {

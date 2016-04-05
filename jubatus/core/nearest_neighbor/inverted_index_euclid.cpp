@@ -24,6 +24,12 @@ inverted_index_euclid::inverted_index_euclid(const std::string& id)
   : inverted_index(id) {
 }
 
+inverted_index_euclid::inverted_index_euclid(
+    const std::string& id,
+    const jubatus::util::lang::shared_ptr<unlearner::unlearner_base> &unl)
+  : inverted_index(id, unl) {
+}
+
 inverted_index_euclid::~inverted_index_euclid() {
 }
 
@@ -38,13 +44,6 @@ void inverted_index_euclid::neighbor_row(
   for (size_t i = 0; i < ids.size(); ++i) {
     ids[i].second = -ids[i].second;
   }
-}
-
-void inverted_index_euclid::neighbor_row(
-    const std::string& query_id,
-    std::vector<std::pair<std::string, float> >& ids,
-    uint64_t ret_num) const {
-  throw std::runtime_error("NOT IMPLEMENTED inverted_index_euclid::neighbor_row");
 }
 
 }  // namespace nearest_neighbor

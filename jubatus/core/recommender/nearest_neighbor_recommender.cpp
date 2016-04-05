@@ -22,7 +22,7 @@
 #include "jubatus/util/data/serialization.h"
 #include "jubatus/util/lang/shared_ptr.h"
 #include "../common/exception.hpp"
-#include "../nearest_neighbor/nearest_neighbor_base.hpp"
+#include "../nearest_neighbor/nearest_neighbor.hpp"
 #include "../unlearner/unlearner.hpp"
 
 using jubatus::util::lang::shared_ptr;
@@ -49,6 +49,7 @@ nearest_neighbor_recommender::nearest_neighbor_recommender(
     jubatus::util::lang::shared_ptr<nearest_neighbor::nearest_neighbor_base>
         nearest_neighbor_engine)
     : nearest_neighbor_engine_(nearest_neighbor_engine) {
+  init();
 }
 
 nearest_neighbor_recommender::nearest_neighbor_recommender(
@@ -58,6 +59,15 @@ nearest_neighbor_recommender::nearest_neighbor_recommender(
     : nearest_neighbor_engine_(nearest_neighbor_engine),
       unlearner_(unlearner) {
   unlearner_->set_callback(unlearning_callback(this));
+  init();
+}
+
+void nearest_neighbor_recommender::init() {
+  nearest_neighbor::inverted_index* nn_inv =
+    dynamic_cast<nearest_neighbor::inverted_index*>(nearest_neighbor_engine_.get());
+  if (nn_inv) {
+    nn_inv->setup_original_storage(orig_);
+  }
 }
 
 void nearest_neighbor_recommender::similar_row(
@@ -75,7 +85,7 @@ void nearest_neighbor_recommender::neighbor_row(
 }
 
 void nearest_neighbor_recommender::clear() {
-  orig_.clear();
+  orig_->clear();
   nearest_neighbor_engine_->clear();
   if (unlearner_) {
     unlearner_->clear();
@@ -83,8 +93,8 @@ void nearest_neighbor_recommender::clear() {
 }
 
 void nearest_neighbor_recommender::clear_row(const std::string& id) {
-  orig_.remove_row(id);
   nearest_neighbor_engine_->delete_row(id);
+  orig_->remove_row(id);
   if (unlearner_) {
     unlearner_->remove(id);
   }
@@ -94,8 +104,8 @@ void nearest_neighbor_recommender::clear_row(const std::string& id) {
  * Callback from unlearner
  */
 void nearest_neighbor_recommender::unlearn_row(const std::string& id) {
-  orig_.remove_row(id);
   nearest_neighbor_engine_->delete_row(id);
+  orig_->remove_row(id);
 }
 
 void nearest_neighbor_recommender::update_row(
@@ -108,9 +118,9 @@ void nearest_neighbor_recommender::update_row(
           "the maximum size of unlearner: " + id));
     }
   }
-  orig_.set_row(id, diff);
+  orig_->set_row(id, diff);
   common::sfv_t row;
-  orig_.get_row(id, row);
+  orig_->get_row(id, row);
   nearest_neighbor_engine_->set_row(id, row);
 }
 
@@ -129,7 +139,7 @@ framework::mixable* nearest_neighbor_recommender::get_mixable() const {
 
 void nearest_neighbor_recommender::pack(framework::packer& packer) const {
   packer.pack_array(2);
-  orig_.pack(packer);
+  orig_->pack(packer);
   nearest_neighbor_engine_->pack(packer);
 }
 
@@ -137,7 +147,7 @@ void nearest_neighbor_recommender::unpack(msgpack::object o) {
   if (o.type != msgpack::type::ARRAY || o.via.array.size != 2) {
     throw msgpack::type_error();
   }
-  orig_.unpack(o.via.array.ptr[0]);
+  orig_->unpack(o.via.array.ptr[0]);
   nearest_neighbor_engine_->unpack(o.via.array.ptr[1]);
 }
 

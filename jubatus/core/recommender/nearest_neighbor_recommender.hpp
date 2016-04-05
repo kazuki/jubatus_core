@@ -74,6 +74,7 @@ class nearest_neighbor_recommender : public recommender_base {
 
  private:
   class unlearning_callback;
+  void init();
 
   jubatus::util::lang::shared_ptr<nearest_neighbor::nearest_neighbor_base>
       nearest_neighbor_engine_;

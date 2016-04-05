@@ -208,28 +208,49 @@ create_recommender_configs_with_unlearner() {
   js["unlearner_parameter"]["max_size"] = to_json(MAX_SIZE);
   js["unlearner_parameter"]["sticky_pattern"] =
     to_json(string("*_sticky"));
+  static const std::string nn_recommender("nearest_neighbor_recommender");
 
-  // inverted_index
-  configs.push_back(make_pair("inverted_index",
-      common::jsonconfig::config(js)));
-
-  // inverted_index_euclid
-  configs.push_back(make_pair("inverted_index_euclid",
-      common::jsonconfig::config(js)));
-
-  // lsh
-  json js_lsh(js.clone());
-  js_lsh["hash_num"] = to_json(64);
-  configs.push_back(make_pair("lsh", common::jsonconfig::config(js_lsh)));
-
-  // minhash
-  json js_minhash(js.clone());
-  js_minhash["hash_num"] = to_json(64);
-  configs.push_back(
-      make_pair("minhash", common::jsonconfig::config(js_minhash)));
-
-  // TODO(@rimms): Add NN-based algorithm
-
+  {
+    json js_nn(js.clone());
+    js_nn["parameter"] = json(new json_object);
+    js_nn["method"] = to_json(string("inverted_index"));
+    configs.push_back(make_pair(nn_recommender,
+                                common::jsonconfig::config(js_nn)));
+  }
+  {
+    json js_nn(js.clone());
+    js_nn["parameter"] = json(new json_object);
+    js_nn["method"] = to_json(string("inverted_index_euclid"));
+    configs.push_back(make_pair(nn_recommender,
+                                common::jsonconfig::config(js_nn)));
+  }
+  {
+    json js_nn(js.clone());
+    json nn_param(new json_object);
+    js_nn["method"] = to_json(string("lsh"));
+    nn_param["hash_num"] = to_json(64);
+    js_nn["parameter"] = nn_param;
+    configs.push_back(make_pair(nn_recommender,
+                                common::jsonconfig::config(js_nn)));
+  }
+  {
+    json js_nn(js.clone());
+    json nn_param(new json_object);
+    js_nn["method"] = to_json(string("minhash"));
+    nn_param["hash_num"] = to_json(64);
+    js_nn["parameter"] = nn_param;
+    configs.push_back(make_pair(nn_recommender,
+                                common::jsonconfig::config(js_nn)));
+  }
+  {
+    json js_nn(js.clone());
+    json nn_param(new json_object);
+    js_nn["method"] = to_json(string("euclid_lsh"));
+    nn_param["hash_num"] = to_json(64);
+    js_nn["parameter"] = nn_param;
+    configs.push_back(make_pair(nn_recommender,
+                                common::jsonconfig::config(js_nn)));
+  }
   return configs;
 }
 
@@ -302,25 +323,25 @@ class recommender_mix_with_unlearning_test
   }
 
   framework::diff_object make_diff() {
-    msgpack::sbuffer data1;
+    data1.clear();
+    data2.clear();
     msgpack::unpacked unpacked1;
     {
       core::framework::stream_writer<msgpack::sbuffer> st(data1);
       core::framework::jubatus_packer jp(st);
       core::framework::packer pk(jp);
       mixable1->get_diff(pk);
-      msgpack::unpack(&unpacked1, data1.data(), data1.size());
     }
+    msgpack::unpack(&unpacked1, data1.data(), data1.size());
 
-    msgpack::sbuffer data2;
     msgpack::unpacked unpacked2;
     {
       core::framework::stream_writer<msgpack::sbuffer> st(data2);
       core::framework::jubatus_packer jp(st);
       core::framework::packer pk(jp);
       mixable2->get_diff(pk);
-      msgpack::unpack(&unpacked2, data2.data(), data2.size());
     }
+    msgpack::unpack(&unpacked2, data2.data(), data2.size());
     framework::diff_object diff =
         mixable2->convert_diff_object(unpacked2.get());
     mixable2->mix(unpacked1.get(), diff);
@@ -328,6 +349,8 @@ class recommender_mix_with_unlearning_test
   }
   shared_ptr<driver::recommender> recommender1, recommender2;
   framework::linear_mixable *mixable1, *mixable2;
+  msgpack::sbuffer data1;
+  msgpack::sbuffer data2;
 };
 
 TEST_P(recommender_mix_with_unlearning_test, basic) {

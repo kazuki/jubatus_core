@@ -31,17 +31,15 @@ namespace nearest_neighbor {
 class inverted_index_euclid : public inverted_index {
 public:
   explicit inverted_index_euclid(const std::string& id);
+  inverted_index_euclid(const std::string& id,
+                        const jubatus::util::lang::shared_ptr<unlearner::unlearner_base> &unl);
   virtual ~inverted_index_euclid();
 
-  std::string type() const {
+  virtual std::string type() const {
     return "inverted_index_euclid";
   }
-  void neighbor_row(
+  virtual void neighbor_row(
       const common::sfv_t& query,
-      std::vector<std::pair<std::string, float> >& ids,
-      uint64_t ret_num) const;
-  void neighbor_row(
-      const std::string& query_id,
       std::vector<std::pair<std::string, float> >& ids,
       uint64_t ret_num) const;
 };

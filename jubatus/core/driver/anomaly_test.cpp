@@ -103,7 +103,7 @@ vector<shared_ptr<anomaly_base> > create_anomaly_base() {
   const std::string ID;
 
 
-#if 0
+#if 0 // TODO(kazuki)
   // lof
   core::anomaly::lof_storage::config lof_config;
   lof_config.nearest_neighbor_num = 10;

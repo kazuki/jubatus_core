@@ -21,6 +21,7 @@
 #include <string>
 #include "jubatus/util/lang/shared_ptr.h"
 #include "../common/jsonconfig.hpp"
+#include "../unlearner/unlearner_base.hpp"
 
 namespace jubatus {
 namespace core {
@@ -35,6 +36,12 @@ jubatus::util::lang::shared_ptr<nearest_neighbor_base> create_nearest_neighbor(
     const std::string& name,
     const common::jsonconfig::config& config,
     const std::string& id);
+
+jubatus::util::lang::shared_ptr<nearest_neighbor_base> create_nearest_neighbor(
+    const std::string& name,
+    const common::jsonconfig::config& config,
+    const std::string& id,
+    const jubatus::util::lang::shared_ptr<unlearner::unlearner_base>&);
 
 }  // namespace nearest_neighbor
 }  // namespace core

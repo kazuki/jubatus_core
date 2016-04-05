@@ -59,9 +59,6 @@ shared_ptr<recommender_base> recommender_factory::create_recommender(
   if (name == "nearest_neighbor_recommender") {
     nearest_neighbor_recommender_config conf =
         config_cast_check<nearest_neighbor_recommender_config>(param);
-    shared_ptr<nearest_neighbor::nearest_neighbor_base>
-        nearest_neighbor_engine(nearest_neighbor::create_nearest_neighbor(
-            conf.method, conf.parameter, id));
     if (conf.unlearner) {
       if (!conf.unlearner_parameter) {
         throw JUBATUS_EXCEPTION(
@@ -71,11 +68,18 @@ shared_ptr<recommender_base> recommender_factory::create_recommender(
       shared_ptr<unlearner::unlearner_base> unl(unlearner::create_unlearner(
           *conf.unlearner, common::jsonconfig::config(
               *conf.unlearner_parameter)));
+      shared_ptr<nearest_neighbor::nearest_neighbor_base>
+          nearest_neighbor_engine(nearest_neighbor::create_nearest_neighbor(
+              conf.method, conf.parameter, id, unl));
       return shared_ptr<recommender_base>(
           new nearest_neighbor_recommender(nearest_neighbor_engine, unl));
+    } else {
+      shared_ptr<nearest_neighbor::nearest_neighbor_base>
+          nearest_neighbor_engine(nearest_neighbor::create_nearest_neighbor(
+              conf.method, conf.parameter, id));
+      return shared_ptr<recommender_base>(
+          new nearest_neighbor_recommender(nearest_neighbor_engine));
     }
-    return shared_ptr<recommender_base>(
-        new nearest_neighbor_recommender(nearest_neighbor_engine));
   } else {
     throw JUBATUS_EXCEPTION(common::unsupported_method(name));
   }

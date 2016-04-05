@@ -28,6 +28,7 @@ namespace jubatus {
 namespace core {
 namespace anomaly {
 
+#if 0 // TODO(kazuki)
 TEST(anomaly_factory, create_lof) {
   json js(new json_object);
   js["method"] = to_json(std::string("lsh"));
@@ -38,6 +39,7 @@ TEST(anomaly_factory, create_lof) {
   common::jsonconfig::config conf(js);
   EXPECT_NO_THROW(anomaly_factory::create_anomaly("lof", conf, "id"));
 }
+#endif
 
 TEST(anomaly_factory, create_light_lof) {
   json js(new json_object);
@@ -64,6 +66,7 @@ TEST(anomaly_factory, create_light_lof_with_unlearner) {
   EXPECT_NO_THROW(anomaly_factory::create_anomaly("light_lof", conf, "id"));
 }
 
+#if 0 // TODO(kazuki)
 TEST(anomaly_factory, create_lof_with_unlearner) {
   // LOF does not support unleaner
   json js(new json_object);
@@ -79,7 +82,7 @@ TEST(anomaly_factory, create_lof_with_unlearner) {
   EXPECT_THROW(anomaly_factory::create_anomaly("lof", conf, "id"),
                common::jsonconfig::cast_check_error);
 }
-
+#endif
 
 
 }  // namespace anomaly
