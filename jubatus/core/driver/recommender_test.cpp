@@ -36,6 +36,7 @@
 #include "../framework/stream_writer.hpp"
 #include "../storage/column_table.hpp"
 #include "../unlearner/lru_unlearner.hpp"
+#include "../nearest_neighbor/nearest_neighbor.hpp"
 #include "recommender.hpp"
 
 #include "test_util.hpp"
@@ -59,7 +60,6 @@ using jubatus::core::recommender::recommender_base;
 using jubatus::core::storage::column_table;
 using jubatus::core::unlearner::unlearner_base;
 using jubatus::core::unlearner::lru_unlearner;
-using jubatus::core::recommender::inverted_index;
 
 namespace jubatus {
 namespace core {
@@ -68,9 +68,11 @@ namespace driver {
 class recommender_test : public ::testing::Test {
  protected:
   void SetUp() {
+    const std::string id;
+    shared_ptr<core::nearest_neighbor::nearest_neighbor_base> nn(new core::nearest_neighbor::inverted_index(id));
     recommender_.reset(new driver::recommender(
           jubatus::util::lang::shared_ptr<core::recommender::recommender_base>(
-            new core::recommender::inverted_index),
+            new core::recommender::nearest_neighbor_recommender(nn)),
           make_fv_converter()));
   }
 
@@ -98,9 +100,11 @@ class nn_recommender_test
         shared_ptr<core::recommender::recommender_base> > {
  protected:
   void SetUp() {
+    const std::string id;
+    shared_ptr<core::nearest_neighbor::nearest_neighbor_base> nn(new core::nearest_neighbor::inverted_index(id));
     recommender_.reset(new driver::recommender(
           jubatus::util::lang::shared_ptr<core::recommender::recommender_base>(
-            new core::recommender::inverted_index),
+            new core::recommender::nearest_neighbor_recommender(nn)),
           make_tf_idf_fv_converter()));
   }
 

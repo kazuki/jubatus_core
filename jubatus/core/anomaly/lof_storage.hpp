@@ -33,6 +33,7 @@
 #include "../common/type.hpp"
 #include "../common/unordered_map.hpp"
 #include "../framework/mixable_helper.hpp"
+#include "../recommender/recommender.hpp"
 
 namespace jubatus {
 namespace core {
@@ -72,7 +73,6 @@ class lof_storage {
     }
   };
 
-  lof_storage();
   explicit lof_storage(
       jubatus::util::lang::shared_ptr<core::recommender::recommender_base>
           nn_engine);

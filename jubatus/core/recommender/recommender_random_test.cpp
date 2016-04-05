@@ -1,3 +1,4 @@
+#if 0
 // Jubatus: Online machine learning framework for distributed environment
 // Copyright (C) 2012 Preferred Networks and Nippon Telegraph and Telephone Corporation.
 //
@@ -310,7 +311,7 @@ REGISTER_TYPED_TEST_CASE_P(recommender_random_test,
     trivial, random, pack_and_unpack, get_all_row_ids,
     diff, mix);
 
-typedef testing::Types<inverted_index, lsh, minhash, euclid_lsh>
+typedef testing::Types<nearest_neighbor_recommender>
   recommender_types;
 
 INSTANTIATE_TYPED_TEST_CASE_P(rt, recommender_random_test, recommender_types);
@@ -318,3 +319,4 @@ INSTANTIATE_TYPED_TEST_CASE_P(rt, recommender_random_test, recommender_types);
 }  // namespace recommender
 }  // namespace core
 }  // namespace jubatus
+#endif

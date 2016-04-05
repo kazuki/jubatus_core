@@ -28,7 +28,6 @@
 #include "../common/exception.hpp"
 #include "../common/jsonconfig.hpp"
 #include "../common/vector_util.hpp"
-#include "../recommender/euclid_lsh.hpp"
 #include "../recommender/recommender_factory.hpp"
 
 using jubatus::util::data::unordered_map;
@@ -57,16 +56,6 @@ lof_storage::config::config()
     : nearest_neighbor_num(DEFAULT_NEIGHBOR_NUM),
       reverse_nearest_neighbor_num(DEFAULT_REVERSE_NN_NUM),
       ignore_kth_same_point(DEFAULT_IGNORE_KTH_SAME_POINT) {
-}
-
-lof_storage::lof_storage()
-    : neighbor_num_(DEFAULT_NEIGHBOR_NUM),
-      reverse_nn_num_(DEFAULT_REVERSE_NN_NUM),
-      ignore_kth_same_point_(DEFAULT_IGNORE_KTH_SAME_POINT),
-      nn_engine_(recommender::recommender_factory::create_recommender(
-          "euclid_lsh",
-          common::jsonconfig::config(jubatus::util::text::json::to_json(
-              recommender::euclid_lsh::config())), "")) {
 }
 
 lof_storage::lof_storage(

@@ -103,6 +103,7 @@ vector<shared_ptr<anomaly_base> > create_anomaly_base() {
   const std::string ID;
 
 
+#if 0
   // lof
   core::anomaly::lof_storage::config lof_config;
   lof_config.nearest_neighbor_num = 10;
@@ -118,6 +119,7 @@ vector<shared_ptr<anomaly_base> > create_anomaly_base() {
       new core::anomaly::lof(lof_config,
           shared_ptr<core::recommender::recommender_base>(
               new core::recommender::euclid_lsh(lof_lsh_config)))));
+#endif
 
   // light_lof
   core::anomaly::light_lof::config light_lof_config;

@@ -63,45 +63,6 @@ class recommender_factory_test
 std::vector<recommender_parameter> generate_parameters() {
   std::vector<recommender_parameter> ret;
 
-  {  // inverted index
-    json js(new json_object);
-    ret.push_back(
-        recommender_parameter(
-          "inverted_index",
-          common::jsonconfig::config(js)));
-    {  // unlearn
-      // TODO(kumagi): it would not run correctly
-      json js_unlearn(js.clone());
-      js_unlearn["unlearner"] = to_json(std::string("lru"));
-      js_unlearn["unlearner_parameter"] = new json_object;
-      js_unlearn["unlearner_parameter"]["max_size"] = to_json(1);
-      ret.push_back(
-          recommender_parameter(
-              "inverted_index",
-              common::jsonconfig::config(js_unlearn)));
-    }
-  }
-
-  {  // minhash / lsh
-    json js(new json_object);
-    json js_unlearn(js.clone());
-    js["hash_num"] = to_json(64);
-    common::jsonconfig::config conf(js);
-    ret.push_back(make_pair("minhash", conf));
-    ret.push_back(make_pair("lsh", conf));
-  }
-
-  {  // euclid_lsh
-    json js(new json_object);
-    js["hash_num"] = to_json(64);
-    js["table_num"] = to_json(10);
-    js["bin_width"] = to_json(1.0);
-    js["probe_num"] = to_json(1);
-    js["seed"] = to_json(0);
-    js["retain_projection"] = to_json(false);
-    ret.push_back(make_pair("euclid_lsh", common::jsonconfig::config(js)));
-  }
-
   {  // nearest_neighbor_recommender without unlearn
     json js(new json_object);
     js["method"] = to_json(std::string("minhash"));
@@ -135,21 +96,6 @@ INSTANTIATE_TEST_CASE_P(
     create_without_unlearner,
     recommender_factory_test,
     ::testing::ValuesIn(generate_parameters()));
-
-TEST(recommender_factory, no_unlearner_parameter) {
-  json js(new json_object);
-  js["method"] = to_json(std::string("minhash"));
-  js["parameter"] = json(new json_object);
-  js["parameter"]["hash_num"] = to_json(64);
-  js["unlearner"] = to_json(std::string("lru"));
-  common::jsonconfig::config conf(js);
-  EXPECT_THROW(
-      recommender_factory::create_recommender(
-          "nearest_neighbor_recommender",
-          conf,
-          "id"),
-      common::config_exception);
-}
 
 }  // namespace recommender
 }  // namespace core
