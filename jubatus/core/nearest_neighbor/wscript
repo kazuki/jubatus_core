@@ -16,6 +16,7 @@ def build(bld):
       'lsh.cpp',
       'lsh_function.cpp',
       'euclid_lsh.cpp',
+      'euclid_lsh2.cpp',
       'inverted_index.cpp',
       'inverted_index_euclid.cpp'
     ]
@@ -23,6 +24,7 @@ def build(bld):
       'bit_vector_nearest_neighbor_base.hpp',
       'bit_vector_ranking.hpp',
       'euclid_lsh.hpp',
+      'euclid_lsh2.hpp',
       'exception.hpp',
       'lsh.hpp',
       'lsh_function.hpp',

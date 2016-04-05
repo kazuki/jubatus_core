@@ -18,6 +18,7 @@
 #define JUBATUS_CORE_NEAREST_NEIGHBOR_NEAREST_NEIGHBOR_HPP_
 
 #include "euclid_lsh.hpp"
+#include "euclid_lsh2.hpp"
 #include "lsh.hpp"
 #include "minhash.hpp"
 #include "inverted_index.hpp"

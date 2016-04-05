@@ -41,6 +41,9 @@ shared_ptr<nearest_neighbor_base> create_nearest_neighbor(
         new euclid_lsh(config_cast_check<euclid_lsh::config>(config),
                        shared_ptr<storage::column_table>(new storage::column_table),
                        id));
+  } else if (name == "euclid_lsh2") {
+    return shared_ptr<nearest_neighbor_base>(
+        new euclid_lsh2(config_cast_check<euclid_lsh2::config>(config), id));
   } else if (name == "lsh") {
     return shared_ptr<nearest_neighbor_base>(
         new lsh(config_cast_check<lsh::config>(config),
