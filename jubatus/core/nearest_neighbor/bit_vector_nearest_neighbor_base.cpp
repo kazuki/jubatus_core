@@ -23,6 +23,14 @@
 #include "bit_vector_ranking.hpp"
 #include "jubatus/util/concurrent/rwmutex.h"
 
+#ifdef JUBATUS_CORE_NUMA
+#include <numa.h>
+#include <numaif.h>
+#include "../common/thread_pool.hpp"
+#include "jubatus/util/math/ratio.h"
+#include <iostream>
+#endif
+
 using std::string;
 using std::pair;
 using std::vector;
@@ -126,6 +134,45 @@ void bit_vector_nearest_neighbor_base::neighbor_row_from_hash(
                             scores[i].second));
   }
 }
+
+#ifdef JUBATUS_CORE_NUMA
+void bit_vector_nearest_neighbor_base::rearrange_memory_location() const {
+  using jubatus::util::lang::shared_ptr;
+  using jubatus::core::common::default_numa_thread_pool;
+
+  // TODO: pagesizeアライメントの他にビットベクタ長でアライメントする
+  const_bit_vector_column& table = bit_vector_column();
+  const size_t pagesize = default_numa_thread_pool.pagesize();
+  const size_t bytes = table.size_bytes();
+  const int num_nodes = default_numa_thread_pool.get_node_count();
+  const size_t pages_per_node = std::max(static_cast<size_t>(1), static_cast<size_t>(std::ceil(static_cast<double>(bytes) / pagesize / num_nodes)));
+  size_t remains = bytes;
+  const uint8_t *p = reinterpret_cast<const uint8_t*>(table.get_data_at_unsafe(0));
+  std::vector<void*> pages;
+  std::vector<int> nodes;
+  for (int i = 0; i < num_nodes && remains > 0; ++i) {
+    // TODO: メモリのないノードやメモリサイズが小さいノードの取り扱い
+    size_t sz = pages_per_node * pagesize;
+    if (sz > remains)
+      sz = remains;
+    pages.push_back(const_cast<void*>(static_cast<const void*>(p)));
+    nodes.push_back(i);
+    p += sz;
+    remains -= sz;
+  }
+  std::vector<int> status(pages.size());
+  numa_move_pages(0, pages.size(), pages.data(), nodes.data(), const_cast<int*>(status.data()), MPOL_MF_MOVE);
+  std::cout << "move_pages results: ";
+  for (size_t i = 0; i < status.size(); ++i)
+    std::cout << status[i] << ", ";
+  std::cout << std::endl;
+}
+
+void bit_vector_nearest_neighbor_base::unpack(msgpack::object o) {
+  nearest_neighbor_base::unpack(o);
+  rearrange_memory_location();
+}
+#endif
 
 }  // namespace nearest_neighbor
 }  // namespace core

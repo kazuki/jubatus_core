@@ -46,10 +46,10 @@ void ranking_hamming_bit_vectors(
 template <typename Function, typename THeap>
 void ranking_hamming_bit_vectors_internal(
     Function& f, size_t size, uint32_t threads, THeap& heap) {
-  typedef std::vector<
-    jubatus::util::lang::shared_ptr<
-      jubatus::core::common::thread_pool::future<THeap> > > future_list_t;
+  using jubatus::util::lang::shared_ptr;
+  typedef std::vector<shared_ptr<jubatus::core::common::thread_pool::future<THeap> > > future_list_t;
   if (threads > 1) {
+#ifndef JUBATUS_CORE_NUMA
     size_t block_size = static_cast<size_t>(
       std::ceil(size / static_cast<float>(threads)));
     std::vector<jubatus::util::lang::function<THeap()> > funcs;
@@ -61,6 +61,24 @@ void ranking_hamming_bit_vectors_internal(
     }
     future_list_t futures =
       jubatus::core::common::default_thread_pool::async_all(funcs);
+#else
+    // TODO: 分割をbit_vector_nearest_neighbor_base::rearrange_memory_locationと共通化する
+    using jubatus::core::common::default_numa_thread_pool;
+    const int num_nodes = default_numa_thread_pool.get_node_count();
+    const size_t bvs_per_node = static_cast<size_t>(std::ceil(static_cast<double>(size) / num_nodes));
+    size_t end = 0;
+    future_list_t futures;
+    for (int i = 0; i < num_nodes && end < size; ++i) {
+      const jubatus::core::common::numa_thread_pool::node_info& ni =
+        jubatus::core::common::default_numa_thread_pool.get_nodeinfo(i);
+      const size_t bvs_per_cpu = bvs_per_node / ni.num_of_cpus;
+      for (int j = 0; j < ni.num_of_cpus; ++j) {
+        const size_t off = end;
+        end += std::min(bvs_per_cpu, size - off);
+        futures.push_back(jubatus::core::common::default_numa_thread_pool.async(i, jubatus::util::lang::bind(f, off, end)));
+      }
+    }
+#endif
     for (typename future_list_t::iterator it = futures.begin();
          it != futures.end(); ++it) {
       heap.merge((*it)->get());

@@ -269,6 +269,9 @@ class typed_column<bit_vector> : public detail::abstract_column_base {
     JUBATUS_ASSERT_EQ(array_.size() % blocks_per_value_(), 0u, "");
     return array_.size() / blocks_per_value_();
   }
+  uint64_t size_bytes() const {
+    return array_.size() * sizeof(uint64_t);
+  }
   bit_vector operator[](uint64_t index) {
     return bit_vector(get_data_at_(index), type().bit_vector_length());
   }

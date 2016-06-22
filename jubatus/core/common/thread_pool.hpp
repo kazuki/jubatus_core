@@ -72,6 +72,9 @@ class thread_pool {
     bool finished_;
 
     friend class thread_pool;
+#ifdef JUBATUS_CORE_NUMA
+    friend class numa_thread_pool;
+#endif
 
     future(const future&);
     future& operator =(const future&);
@@ -169,7 +172,86 @@ namespace default_thread_pool {
   async_all(const std::vector<Function>& funcs) {
     return instance.async_all(funcs);
   }
-}
+}  // namespace default_thread_pool
+
+
+#ifdef JUBATUS_CORE_NUMA
+class numa_thread_pool {
+  typedef jubatus::util::concurrent::mutex mutex;
+  typedef jubatus::util::concurrent::condition condition;
+  typedef jubatus::util::concurrent::thread thread;
+  typedef jubatus::util::concurrent::scoped_lock scoped_lock;
+
+ public:
+  struct node_info {
+    int id;
+    int num_of_cpus;
+    long long size;
+  };
+
+ private:
+  struct node_info2 : public node_info {
+    std::vector<jubatus::util::lang::shared_ptr<thread> > threads;
+    std::queue<jubatus::util::lang::function<void()> > queue;
+    mutex lock;
+    condition cond;
+  };
+
+ public:
+  numa_thread_pool();
+  ~numa_thread_pool();
+
+  template<typename Function>
+  jubatus::util::lang::shared_ptr<thread_pool::future<typename Function::result_type> >
+  async(int node, Function f) {
+    using jubatus::util::lang::bind;
+    using jubatus::util::lang::shared_ptr;
+    typedef typename Function::result_type R;
+    shared_ptr<thread_pool::future<R> >fut(new thread_pool::future<R>(f));
+    node_info2& ni = *nodes_[node];
+    {
+      scoped_lock lk(ni.lock);
+      const bool empty_flag = ni.queue.empty();
+      ni.queue.push(bind(&wrapper<R>, fut.get()));
+      if (empty_flag) {
+        ni.cond.notify_all();
+      }
+    }
+    return fut;
+  }
+
+  inline bool enabled() const {
+    return nodes_.size() > 0;
+  }
+
+  inline size_t pagesize() const {
+    return pagesize_;
+  }
+
+  inline const node_info& get_nodeinfo(int n) const {
+    return *nodes_[n];
+  }
+
+  inline int get_node_count() const {
+    return static_cast<int>(nodes_.size());
+  }
+
+ private:
+  template<typename T>
+  static void wrapper(thread_pool::future<T> *fut) {
+    fut->execute();
+  }
+
+  static void worker(numa_thread_pool*, node_info2*);
+
+  std::vector<jubatus::util::lang::shared_ptr<node_info2> > nodes_;
+  size_t pagesize_;
+  bool shutdown_;
+};
+
+extern numa_thread_pool default_numa_thread_pool;
+#endif
+
 
 }  // namespace common
 }  // namespace core

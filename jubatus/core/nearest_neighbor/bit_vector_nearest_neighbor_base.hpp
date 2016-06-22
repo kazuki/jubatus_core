@@ -55,6 +55,12 @@ class bit_vector_nearest_neighbor_base : public nearest_neighbor_base {
       std::vector<std::pair<std::string, float> >& ids,
       uint64_t ret_num) const;
 
+#ifdef JUBATUS_CORE_NUMA
+  void rearrange_memory_location() const;
+
+  virtual void unpack(msgpack::object o);
+#endif
+
  private:
   virtual storage::bit_vector hash(const common::sfv_t& sfv) const = 0;
 

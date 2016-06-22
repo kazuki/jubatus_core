@@ -54,6 +54,8 @@ def configure(conf):
   # Generate config.hpp
   conf.define('JUBATUS_CORE_VERSION', VERSION)
   conf.define('JUBATUS_CORE_APPNAME', APPNAME)
+  if conf.check_cxx(lib='numa', mandatory=False, uselib_store='NUMA'):
+    conf.define('JUBATUS_CORE_NUMA', 1)
   conf.write_config_header('jubatus/core_config.hpp', guard="JUBATUS_CORE_CONFIG_HPP_", remove=False)
 
   # Version constants
@@ -116,6 +118,8 @@ def build(bld):
   bld.core_headers = []
   bld.core_use = []
 
+  if bld.env.LIB_NUMA:
+    bld.core_use.append('NUMA')
   bld.recurse(subdirs)
 
   # core

@@ -78,7 +78,7 @@ class nearest_neighbor_base {
       uint64_t ret_num) const;
 
   void pack(framework::packer& packer) const;
-  void unpack(msgpack::object o);
+  virtual void unpack(msgpack::object o);
 
   framework::mixable* get_mixable() const;
 
